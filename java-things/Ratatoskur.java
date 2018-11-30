@@ -15,23 +15,28 @@ public class Ratatoskur extends Frame implements ActionListener
 	Label l_error = new Label("[ - - - Error Message space - - - ]");//setText(String)
 	Button custr1 = new Button("Basic HTTP/1.0");
 	Button custr2 = new Button("Basic Gopher");
+	/*MenuBar hzbr = new MenuBar();
+	Menu stuff = new Menu("stuff");*/
 
-	String CRLF = "" + (char)13 + (char)10;
+	final String CRLF = "" + (char)13 + (char)10;
 
 	public static void main(String args[])
 	{
-		Ratatoskur hlíðskjálf = new Ratatoskur();
-		hlíðskjálf.addWindowListener(new CloseWindow());
+		Ratatoskur hlÃ­Ã°skjÃ¡lf = new Ratatoskur();
+		hlÃ­Ã°skjÃ¡lf.addWindowListener(new CloseWindow());
 	}
 
 	public Ratatoskur()
 	{
-		super("Ratatöskur:Manual TCP requests");
+		super("RatatÃ¶skur:Manual TCP requests");
 		this.addWindowListener(new CloseWindow());
-		this.setSize(475,300);
+		this.setSize(485,300);//485,315 with the MenuBar
 		this.setLayout(new FlowLayout());
 		setBackground(new Color(209,210,200));
 		this.setResizable(false);
+
+		/*hzbr.add(stuff);
+		this.setMenuBar(hzbr);*/
 
 		activate.addActionListener(this);
 		custr1.addActionListener(this);
@@ -70,7 +75,6 @@ public class Ratatoskur extends Frame implements ActionListener
 
 	private void sendrequest()
 	{
-		String host = urltovisit.getText();
 		int port;
 		try
 		{
@@ -82,12 +86,19 @@ public class Ratatoskur extends Frame implements ActionListener
 			System.out.println(e);
 			return;
 		}
+		String host = urltovisit.getText();
 		String req = requesttext.getText();
 		Socket iteng;
 		String curl;
 		try
 		{
 			iteng = new Socket(host,port);
+		}
+		catch(IllegalArgumentException e)
+		{
+			l_error.setText("No such port");
+			System.out.println(e);
+			return;
 		}
 		catch(IOException e)
 		{
