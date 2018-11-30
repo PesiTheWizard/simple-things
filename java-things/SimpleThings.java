@@ -37,6 +37,33 @@ public class SimpleThings
 		return nimsum;
 	}
 
+	public static int Pseudorandom(int x, int n, int s, int m)
+	{
+		return ((x%m)*n+(s%m)) % m;
+	}
+
+	public static int cbs1(int[] a, int s, int g, int j, boolean lth)
+	{
+		if(a.length <= 1 || g <= 0 || j == 0)
+		{
+			return -1;
+		}
+		int swaps = 0;
+		int temp;
+		while(s+g<a.length && s>=0)
+		{
+			if( ((a[s]<a[s+g]) ^ lth) && (a[s]!=a[s+g]) )
+			{
+				temp = a[s];
+				a[s] = a[s+g];
+				a[s+g] = temp;
+				swaps++;
+			}
+			s+=j;
+		}
+		return swaps;
+	}
+
 	public static void main(String[] args)
 	{
 		System.out.println("Testing StringDivider:");
@@ -55,5 +82,10 @@ public class SimpleThings
 			System.out.print(n[i] + " ");
 		}
 		System.out.println("\nNimsum="+Nimsum(n));
+		System.out.println(cbs1(n,0,1,2,true)+" swaps made");
+		for(int i=0;i<n.length;i++)
+		{
+			System.out.print(n[i] + " ");
+		}
 	}
 }
