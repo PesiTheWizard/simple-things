@@ -1,0 +1,6 @@
+[Public]
+Object=(Name=Pesi.KingOfTheRealm,Class=Class,MetaClass=Botpack.TournamentGameInfo)
+Object=(Name=BotPack.MinigunArena,Class=Class,MetaClass=Engine.Mutator,Description="Minigun Arena,Miniguns only.")
+Object=(Name=Pesi.BioArena,Class=Class,MetaClass=Engine.Mutator,Description="Bio Arena,Bio rifles only.")
+Object=(Name=Pesi.RipperArena,Class=Class,MetaClass=Engine.Mutator,Description="Ripper Arena,Rippers only.")
+Preferences=(Caption="KingOfTheRealm",Parent="Game Types",Class=Pesi.KingOfTheRealm,Immediate=True)
