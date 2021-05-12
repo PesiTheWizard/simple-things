@@ -22,13 +22,13 @@ public class Ratatoskur extends Frame implements ActionListener
 
 	public static void main(String args[])
 	{
-		Ratatoskur hlÃ­Ã°skjÃ¡lf = new Ratatoskur();
-		hlÃ­Ã°skjÃ¡lf.addWindowListener(new CloseWindow());
+		Ratatoskur hlíðskjálf = new Ratatoskur();
+		hlíðskjálf.addWindowListener(new CloseWindow());
 	}
 
 	public Ratatoskur()
 	{
-		super("RatatÃ¶skur:Manual TCP requests");
+		super("Ratatöskur:Manual TCP requests");
 		this.addWindowListener(new CloseWindow());
 		this.setSize(485,300);//485,315 with the MenuBar
 		this.setLayout(new FlowLayout());
@@ -83,13 +83,11 @@ public class Ratatoskur extends Frame implements ActionListener
 		catch(NumberFormatException e)
 		{
 			l_error.setText("Port number fail");
-			System.out.println(e);
+			System.err.println(e);
 			return;
 		}
 		String host = urltovisit.getText();
-		String req = requesttext.getText();
 		Socket iteng;
-		String curl;
 		try
 		{
 			iteng = new Socket(host,port);
@@ -97,16 +95,17 @@ public class Ratatoskur extends Frame implements ActionListener
 		catch(IllegalArgumentException e)
 		{
 			l_error.setText("No such port");
-			System.out.println(e);
+			System.err.println(e);
 			return;
 		}
 		catch(IOException e)
 		{
 			l_error.setText("Couldn't connect");
-			System.out.println(e);
+			System.err.println(e);
 			return;
 		}
-		curl = iteng.getInetAddress().getHostAddress();
+		String curl = iteng.getInetAddress().getHostAddress();
+		String req = requesttext.getText();
 		BufferedReader in;
 		PrintWriter out;
 		String line;
@@ -127,7 +126,7 @@ public class Ratatoskur extends Frame implements ActionListener
 		catch(IOException e)
 		{
 			l_error.setText("fail at:"+curl);
-			System.out.println(e);
+			System.err.println(e);
 			return;
 		}
 		//
