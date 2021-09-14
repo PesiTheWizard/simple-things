@@ -25,10 +25,19 @@ public class BMPreader
 		int intVResolution = -1;
 		int intPaletteSize = -1;//number of colors in the color palette (0 defaults to 2^N)
 		int intImportantColors = -1;
+		RandomAccessFile CF;
+		try
+		{CF = new RandomAccessFile(args[0],"r");}
+		catch(Exception e)
+		{
+			System.err.println("**Exception**");
+			System.err.println(e);
+			return;
+		}
 		System.out.println("reading file...");
 		try
 		{
-			RandomAccessFile CF = new RandomAccessFile(args[0],"r");
+			System.out.println("Size of file (OS)     : "+CF.length());
 			CF.seek(0);
 			CF.read(bmn);
 			intFilesize = Integer.reverseBytes(CF.readInt());
@@ -59,16 +68,20 @@ public class BMPreader
 			{
 				fuxoredHeader = true;
 			}
-			CF.close();//.getFilePointer() to save the offset for .seek() later
 		}
 		catch(IOException e)
 		{
 			System.err.println("**IOException**");
 			System.err.println(e);
-			System.exit(0);
+		}
+		try{CF.close();}//.getFilePointer() to save the offset for .seek() later
+		catch(IOException e)
+		{
+			System.err.println("**IOException closing file**");
+			System.err.println(e);
 		}
 		String mn = new String(bmn);
-
+		System.out.println("-------------------------");
 		System.out.println("***BMP File Header***");
 		System.out.println("Magic number          : " + mn);
 		System.out.println("Size of file          : " + intFilesize);
