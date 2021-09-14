@@ -1,6 +1,7 @@
 import java.awt.*;
 import java.awt.event.*;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.io.*;
 
 public class Ratatoskur extends Frame implements ActionListener
@@ -95,6 +96,18 @@ public class Ratatoskur extends Frame implements ActionListener
 		catch(IllegalArgumentException e)
 		{
 			l_error.setText("No such port");
+			System.err.println(e);
+			return;
+		}
+		catch(SecurityException e)
+		{
+			l_error.setText("Computer says no");
+			System.err.println(e);
+			return;
+		}
+		catch(UnknownHostException e)
+		{
+			l_error.setText("Host IP not found");
 			System.err.println(e);
 			return;
 		}

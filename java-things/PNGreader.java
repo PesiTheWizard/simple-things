@@ -12,8 +12,6 @@ public class PNGreader
 		}
 		RandomAccessFile CF;
 		long fl;
-		byte sig[] = new byte[8], chty[] = new byte[4];
-		int len, CRC, i;
 		try
 		{
 			CF = new RandomAccessFile(args[0],"r");
@@ -30,19 +28,21 @@ public class PNGreader
 		}
 		catch(IOException e){System.err.println(e);return;}//default one-line catcher
 		long curs;
+		byte sig[] = new byte[8], chty[] = new byte[4];
 		try
 		{
 			CF.read(sig);
 			curs = CF.getFilePointer();
 		}
 		catch(IOException e){System.err.println(e);return;}
-		System.out.println("Signature:");
-		for(i=0;i<8;i++)
+		System.out.print("Signature:\n"+(sig[0]&255));
+		for(int i=1;i<8;i++)
 		{
-			System.out.print((sig[i]&255)+"\t");
+			System.out.print("\t"+(sig[i]&255));
 		}
 		assert curs==8;
-		System.out.println("\nLength\tType\tCRC");
+		int len, CRC;
+		System.out.println("\nExpected:\n137\t80\t78\t71\t13\t10\t26\t10\nLength\tType\tCRC");
 		do
 		{
 			try
