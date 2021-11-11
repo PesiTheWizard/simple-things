@@ -8,7 +8,7 @@ class Card implements Comparable<Card>
 	public Card(String x) throws Exception
 	{
 		char s = x.charAt(0);
-		if(s=='h'|s=='s'|s=='d'|s=='c')
+		if(s=='h'||s=='s'||s=='d'||s=='c')
 		{
 			suit=s;
 		}
