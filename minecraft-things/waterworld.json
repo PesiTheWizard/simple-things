@@ -1,0 +1,167 @@
+{
+	"bonus_chest": false,
+	"seed": 0,
+	"generate_features": true,
+	"dimensions":
+	{
+		"minecraft:overworld":
+		{
+			"type": "minecraft:overworld",
+			"generator":
+			{
+				"type": "minecraft:noise",
+				"seed": 0,
+				"settings": "minecraft:overworld",
+				"biome_source":
+				{
+					"type": "minecraft:multi_noise",
+					"seed": 0,
+					"biomes":
+					[
+						{
+							"biome": "minecraft:warm_ocean",
+							"parameters":
+							{
+								"altitude": 0.5,
+								"humidity": 0.0,
+								"temparature": 1.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "minecraft:lukewarm_ocean",
+							"parameters":
+							{
+								"altitude": 0.5,
+								"humidity": 0.0,
+								"temparature": 0.5,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "minecraft:ocean",
+							"parameters":
+							{
+								"altitude": 0.5,
+								"humidity": 0.0,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "minecraft:cold_ocean",
+							"parameters":
+							{
+								"altitude": 0.5,
+								"humidity": 0.0,
+								"temparature": -0.5,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "minecraft:frozen_ocean",
+							"parameters":
+							{
+								"altitude": 0.5,
+								"humidity": 0.0,
+								"temparature": -1.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "minecraft:deep_warm_ocean",
+							"parameters":
+							{
+								"altitude": -0.5,
+								"humidity": 0.0,
+								"temparature": 1.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "minecraft:deep_lukewarm_ocean",
+							"parameters":
+							{
+								"altitude": -0.5,
+								"humidity": 0.0,
+								"temparature": 0.5,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "minecraft:deep_ocean",
+							"parameters":
+							{
+								"altitude": -0.5,
+								"humidity": 0.0,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "minecraft:deep_cold_ocean",
+							"parameters":
+							{
+								"altitude": -0.5,
+								"humidity": 0.0,
+								"temparature": -0.5,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "minecraft:deep_frozen_ocean",
+							"parameters":
+							{
+								"altitude": -0.5,
+								"humidity": 0.0,
+								"temparature": -1.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						}
+					]
+				}
+			}
+		},
+		"minecraft:the_nether":
+		{
+			"type": "minecraft:the_nether",
+			"generator":
+			{
+				"type": "minecraft:noise",
+				"seed": 0,
+				"settings": "minecraft:nether",
+				"biome_source":
+				{
+					"type": "minecraft:multi_noise",
+					"seed": 0,
+					"preset": "minecraft:nether"
+				}
+			}
+		},
+		"minecraft:the_end":
+		{
+			"type": "minecraft:the_end",
+			"generator":
+			{
+				"type": "minecraft:noise",
+				"seed": 0,
+				"settings": "minecraft:end",
+				"biome_source":
+				{
+					"type": "minecraft:the_end"
+					"seed": 0,
+				}
+			}
+		}
+	}
+}
