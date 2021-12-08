@@ -19,32 +19,32 @@
 					"biomes":
 					[
 						{
-							"biome": "minecraft:warm_ocean",
+							"biome": "1",
 							"parameters":
 							{
-								"altitude": 0.5,
-								"humidity": 0.0,
-								"temparature": 1.0,
+								"altitude": 0.6,
+								"humidity": 0.8,
+								"temparature": 0.0,
 								"weirdness": 0.0,
 								"offset": 0.0
 							}
 						},
 						{
-							"biome": "minecraft:lukewarm_ocean",
+							"biome": "2",
 							"parameters":
 							{
-								"altitude": 0.5,
-								"humidity": 0.0,
-								"temparature": 0.5,
+								"altitude": 0.8,
+								"humidity": 0.6,
+								"temparature": 0.0,
 								"weirdness": 0.0,
 								"offset": 0.0
 							}
 						},
 						{
-							"biome": "minecraft:ocean",
+							"biome": "3",
 							"parameters":
 							{
-								"altitude": 0.5,
+								"altitude": 1.0,
 								"humidity": 0.0,
 								"temparature": 0.0,
 								"weirdness": 0.0,
@@ -52,54 +52,65 @@
 							}
 						},
 						{
-							"biome": "minecraft:cold_ocean",
+							"biome": "4",
 							"parameters":
 							{
-								"altitude": 0.5,
-								"humidity": 0.0,
-								"temparature": -0.5,
+								"altitude": 0.8,
+								"humidity": -0.6,
+								"temparature": 0.0,
 								"weirdness": 0.0,
 								"offset": 0.0
 							}
 						},
 						{
-							"biome": "minecraft:frozen_ocean",
+							"biome": "5",
 							"parameters":
 							{
-								"altitude": 0.5,
-								"humidity": 0.0,
-								"temparature": -1.0,
+								"altitude": 0.6,
+								"humidity": -0.8,
+								"temparature": 0.0,
 								"weirdness": 0.0,
 								"offset": 0.0
 							}
 						},
 						{
-							"biome": "minecraft:deep_warm_ocean",
+							"biome": "6",
 							"parameters":
 							{
-								"altitude": -0.5,
-								"humidity": 0.0,
-								"temparature": 1.0,
+								"altitude": 0.0,
+								"humidity": -1.0,
+								"temparature": 0.0,
 								"weirdness": 0.0,
 								"offset": 0.0
 							}
 						},
 						{
-							"biome": "minecraft:deep_lukewarm_ocean",
+							"biome": "7",
 							"parameters":
 							{
-								"altitude": -0.5,
-								"humidity": 0.0,
-								"temparature": 0.5,
+								"altitude": -0.6,
+								"humidity": -0.8,
+								"temparature": 0.0,
 								"weirdness": 0.0,
 								"offset": 0.0
 							}
 						},
 						{
-							"biome": "minecraft:deep_ocean",
+							"biome": "8",
 							"parameters":
 							{
-								"altitude": -0.5,
+								"altitude": -0.8,
+								"humidity": -0.6,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "9",
+							"parameters":
+							{
+								"altitude": -1.0,
 								"humidity": 0.0,
 								"temparature": 0.0,
 								"weirdness": 0.0,
@@ -107,25 +118,47 @@
 							}
 						},
 						{
-							"biome": "minecraft:deep_cold_ocean",
+							"biome": "10",
 							"parameters":
 							{
-								"altitude": -0.5,
-								"humidity": 0.0,
-								"temparature": -0.5,
+								"altitude": -0.8,
+								"humidity": 0.6,
+								"temparature": 0.0,
 								"weirdness": 0.0,
 								"offset": 0.0
 							}
 						},
 						{
-							"biome": "minecraft:deep_frozen_ocean",
+							"biome": "11",
 							"parameters":
 							{
-								"altitude": -0.5,
-								"humidity": 0.0,
-								"temparature": -1.0,
+								"altitude": -0.6,
+								"humidity": 0.8,
+								"temparature": 0.0,
 								"weirdness": 0.0,
 								"offset": 0.0
+							}
+						},
+						{
+							"biome": "12",
+							"parameters":
+							{
+								"altitude": 0.0,
+								"humidity": 1.0,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "center",
+							"parameters":
+							{
+								"altitude": 0.0,
+								"humidity": 0.0,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.2
 							}
 						}
 					]
