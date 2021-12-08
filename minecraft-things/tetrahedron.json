@@ -1,0 +1,112 @@
+{
+	"bonus_chest": false,
+	"seed": 0,
+	"generate_features": true,
+	"dimensions":
+	{
+		"minecraft:overworld":
+		{
+			"type": "minecraft:overworld",
+			"generator":
+			{
+				"type": "minecraft:noise",
+				"seed": 0,
+				"settings": "minecraft:overworld",
+				"biome_source":
+				{
+					"type": "minecraft:multi_noise",
+					"seed": 0,
+					"biomes":
+					[
+						{
+							"biome": "biome1",
+							"parameters":
+							{
+								"altitude": 1.0,
+								"humidity": 1.0,
+								"temparature": 1.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "biome2",
+							"parameters":
+							{
+								"altitude": 1.0,
+								"humidity": -1.0,
+								"temparature": -1.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "biome3",
+							"parameters":
+							{
+								"altitude": -1.0,
+								"humidity": 1.0,
+								"temparature": -1.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "biome4",
+							"parameters":
+							{
+								"altitude": -1.0,
+								"humidity": -1.0,
+								"temparature": 1.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "centerbiome",
+							"parameters":
+							{
+								"altitude": 0.0,
+								"humidity": 0.0,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 1.0
+							}
+						}
+					]
+				}
+			}
+		},
+		"minecraft:the_nether":
+		{
+			"type": "minecraft:the_nether",
+			"generator":
+			{
+				"type": "minecraft:noise",
+				"seed": 0,
+				"settings": "minecraft:nether",
+				"biome_source":
+				{
+					"type": "minecraft:multi_noise",
+					"seed": 0,
+					"preset": "minecraft:nether"
+				}
+			}
+		},
+		"minecraft:the_end":
+		{
+			"type": "minecraft:the_end",
+			"generator":
+			{
+				"type": "minecraft:noise",
+				"seed": 0,
+				"settings": "minecraft:end",
+				"biome_source":
+				{
+					"type": "minecraft:the_end",
+					"seed": 0
+				}
+			}
+		}
+	}
+}

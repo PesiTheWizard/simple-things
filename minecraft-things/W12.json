@@ -1,0 +1,200 @@
+{
+	"bonus_chest": false,
+	"seed": 0,
+	"generate_features": true,
+	"dimensions":
+	{
+		"minecraft:overworld":
+		{
+			"type": "minecraft:overworld",
+			"generator":
+			{
+				"type": "minecraft:noise",
+				"seed": 0,
+				"settings": "minecraft:overworld",
+				"biome_source":
+				{
+					"type": "minecraft:multi_noise",
+					"seed": 0,
+					"biomes":
+					[
+						{
+							"biome": "1",
+							"parameters":
+							{
+								"altitude": 0.6,
+								"humidity": 0.8,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "2",
+							"parameters":
+							{
+								"altitude": 0.8,
+								"humidity": 0.6,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "3",
+							"parameters":
+							{
+								"altitude": 1.0,
+								"humidity": 0.0,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "4",
+							"parameters":
+							{
+								"altitude": 0.8,
+								"humidity": -0.6,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "5",
+							"parameters":
+							{
+								"altitude": 0.6,
+								"humidity": -0.8,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "6",
+							"parameters":
+							{
+								"altitude": 0.0,
+								"humidity": -1.0,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "7",
+							"parameters":
+							{
+								"altitude": -0.6,
+								"humidity": -0.8,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "8",
+							"parameters":
+							{
+								"altitude": -0.8,
+								"humidity": -0.6,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "9",
+							"parameters":
+							{
+								"altitude": -1.0,
+								"humidity": 0.0,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "10",
+							"parameters":
+							{
+								"altitude": -0.8,
+								"humidity": 0.6,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "11",
+							"parameters":
+							{
+								"altitude": -0.6,
+								"humidity": 0.8,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "12",
+							"parameters":
+							{
+								"altitude": 0.0,
+								"humidity": 1.0,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.0
+							}
+						},
+						{
+							"biome": "center",
+							"parameters":
+							{
+								"altitude": 0.0,
+								"humidity": 0.0,
+								"temparature": 0.0,
+								"weirdness": 0.0,
+								"offset": 0.2
+							}
+						}
+					]
+				}
+			}
+		},
+		"minecraft:the_nether":
+		{
+			"type": "minecraft:the_nether",
+			"generator":
+			{
+				"type": "minecraft:noise",
+				"seed": 0,
+				"settings": "minecraft:nether",
+				"biome_source":
+				{
+					"type": "minecraft:multi_noise",
+					"seed": 0,
+					"preset": "minecraft:nether"
+				}
+			}
+		},
+		"minecraft:the_end":
+		{
+			"type": "minecraft:the_end",
+			"generator":
+			{
+				"type": "minecraft:noise",
+				"seed": 0,
+				"settings": "minecraft:end",
+				"biome_source":
+				{
+					"type": "minecraft:the_end",
+					"seed": 0
+				}
+			}
+		}
+	}
+}
