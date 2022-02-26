@@ -54,6 +54,7 @@ class Shouse
 	public Shouse(Scell[] f, String n, long unkn) throws Exception
 	{
 		if(f==null){throw new Exception("cell array may not be null");}
+		if(n==null){throw new Exception("house must have a non-null name");}
 		cellArray = f;
 		houseName = n;
 		ballot = unkn;
@@ -75,6 +76,7 @@ class Cpair//TODO: everything
 	public Cpair(Scell x, Scell y, int d) throws Exception
 	{
 		if(x==null||y==null){throw new Exception("no nulls in Cpair");}
+		if(x==y){throw new Exception("Cpair must be 2 different cells");}
 		a = x;
 		b = y;
 		gap = d;
@@ -86,6 +88,7 @@ public class Spuzzle
 	public static final String d3 = "123456789";//default sudoku sign string
 	public static final String d4 = "0123456789ABCDEF";
 	public static final String d8 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";//base 64
+	public static final long EO1 = 6148914691236517205L;//alternating 1 and 0 with the lowest as 1
 	public static final char lr = (char)9472;//left-right
 	public static final char rd = (char)9484;//right-down
 	public static final char urd = (char)9500;//up-right-down
@@ -99,7 +102,7 @@ public class Spuzzle
 	public static final char ud = (char)9474;//up-down
 
 	final char[] signs;//list of signs from smallest up, length is also how long each house should be
-	final long[] candy;//where each sign is in the bitmask
+	private final long[] candy;//where each sign is in the bitmask
 	final Scell[] rawcells;
 	final Shouse[] Houses;
 
@@ -122,6 +125,11 @@ public class Spuzzle
 		{
 			if(hs[i].cellArray.length > sca.length)
 			{throw new Exception("houses may not have more cells than there are signs");}
+			for(j=0;j<hs[i].cellArray.length;j++)
+			{
+				if(hs[i].cellArray[j]==null)
+				{throw new Exception("houses may not contain null-cells");}
+			}
 		}
 		candy = new long[sca.length];//maybe unneeded?
 		for(i=0;i<sca.length;i++)
@@ -207,19 +215,7 @@ public class Spuzzle
 		System.out.println(MyPuzzle.countBallots()+" on ballots");
 		System.out.println(MyPuzzle.countSoleCandidates()+" easy squares");
 		System.out.println();
-		while(true)
-		{
-			if(MyPuzzle.fillHouses()){continue;}
-			if(MyPuzzle.findAnyUC()){continue;}
-			if(MyPuzzle.findAnySC()){continue;}
-			if(MyPuzzle.findAnySolePair()){continue;}
-			if(MyPuzzle.findAnyUniquePair()){continue;}
-			if(MyPuzzle.findAnySoleTriple()){continue;}
-			if(MyPuzzle.findAnyUniqueTriple()){continue;}
-			if(MyPuzzle.findAnySoleQuad()){continue;}
-			if(MyPuzzle.findAnyUniqueQuad()){continue;}
-			break;
-		}
+		System.out.println(MyPuzzle.testSolve()+" findings");
 		{//Printing board
 			System.out.println(topofboard);
 			for(int i=0;i<ncls;i++)
@@ -244,7 +240,7 @@ public class Spuzzle
 	{
 		if(si>=signs.length || si<0)
 		{
-			System.err.println("ERROR: confirm was called with bad index");
+			System.err.println("ERROR: confirm was called with bad index("+si+" on "+x+")");
 			return false;
 		}
 		if(x==null)
@@ -294,35 +290,63 @@ public class Spuzzle
 	public boolean baseConfirm()//runs pseudo-confirmation on squares marked original
 	{//run assuming given original squares didn't go through confirmation
 		long mess;
+		int hmo;//how many originals? This is to find double-ups in the initial grid
+		boolean noIssues = true;
 		for(int i=0;i<Houses.length;i++)
 		{
-			mess = 0;
+			mess = 0;//builds into a candidate-list of original squares
+			hmo = 0;
 			for(int j=0;j<Houses[i].cellArray.length;j++)
 			{
 				if(Houses[i].cellArray[j].o)
 				{
+					hmo++;
 					if(Long.bitCount(Houses[i].cellArray[j].cands)==1)
 					{
 						mess|=Houses[i].cellArray[j].cands;
 					}
 					else
 					{
-						System.err.println("ERROR: Original square not single-candidate");
+						System.err.println("ERROR: original square "+Houses[i].cellArray[j]+" not single-candidate");
 						return false;
 					}
 				}
 			}
-			mess = (~mess);
+			if(Long.bitCount(mess)!=hmo)
+			{
+				System.err.println("ALERT: clones detected in "+Houses[i]);
+				noIssues = false;
+			}
+			mess = (~mess);//lists everything except the original squares
 			for(int j=0;j<Houses[i].cellArray.length;j++)
 			{
 				if(!Houses[i].cellArray[j].o)
-				{
+				{//removes the originals' candidacies from the other squares...
 					Houses[i].cellArray[j].cands&=mess;
 				}
 			}
-			Houses[i].ballot&=mess;
+			Houses[i].ballot&=mess;//...and the house in question
 		}
-		return true;
+		return noIssues;
+	}
+
+	private int testSolve()
+	{
+		int finds = 0;
+		while(true)
+		{
+			if(fillHouses()){finds++;continue;}
+			if(findAnyUC()){finds++;continue;}
+			if(findAnySC()){finds++;continue;}
+			if(findAnySolePair()){finds++;continue;}
+			if(findAnyUniquePair()){finds++;continue;}
+			if(findAnySoleTriple()){finds++;continue;}
+			if(findAnyUniqueTriple()){finds++;continue;}
+			if(findAnySoleQuad()){finds++;continue;}
+			if(findAnyUniqueQuad()){finds++;continue;}
+			break;
+		}
+		return finds;
 	}
 
 	public boolean fillHouses()
@@ -336,10 +360,16 @@ public class Spuzzle
 				{
 					if(!Houses[i].cellArray[j].t)
 					{
+						if(Houses[i].cellArray[j].cands == 0L)//rotten borough
+						{
+							System.err.println("ALERT: rotten borough encountered at "+Houses[i].cellArray[j]+" while trying to fill "+Houses[i]+". Purging ballot.");
+							Houses[i].ballot = 0L;//It had 1, now it has none
+							return false;
+						}
 						temp = Long.numberOfTrailingZeros(Houses[i].cellArray[j].cands);
 						if(confirm(Houses[i].cellArray[j],temp))
 						{
-							System.out.println("Filling House : "+Houses[i].cellArray[j]+" in "+Houses[i]+" is '"+signs[temp]+"'");
+							System.out.println("Filling "+Houses[i]+" : "+Houses[i].cellArray[j]+" is '"+signs[temp]+"'");
 							return true;
 						}
 					}
@@ -355,7 +385,7 @@ public class Spuzzle
 		int temp;
 		if(!x.t && Long.bitCount(x.cands)==1)
 		{
-			temp = Long.numberOfTrailingZeros(x.cands);
+			temp = Long.numberOfTrailingZeros(x.cands);//known to have 1 bit, temp won't be 64
 			if(confirm(x,temp))
 			{
 				System.out.println("Sole Candidate '"+signs[temp]+"' found at "+x);
@@ -728,9 +758,9 @@ public class Spuzzle
 
 	public void roomservice()//in case of random desync, such as cosmic ray
 	{//only use if all houses are full-sized
-		int j;
+		int i, j;
 		long temp;
-		for(int i=0;i<Houses.length;i++)
+		for(i=0;i<Houses.length;i++)
 		{
 			temp = 0L;
 			for(j=0;j<Houses[i].cellArray.length;j++)//builds a pseudo-ballot...
