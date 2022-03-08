@@ -128,7 +128,7 @@ public class Spuzzle
 			for(j=0;j<hs[i].cellArray.length;j++)
 			{
 				if(hs[i].cellArray[j]==null)
-				{throw new Exception("houses may not contain null-cells");}
+				{throw new Exception("houses may not contain null-cells("+hs[i]+" at "+j+")");}
 			}
 		}
 		candy = new long[sca.length];//maybe unneeded?
