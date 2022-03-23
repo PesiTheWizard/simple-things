@@ -330,7 +330,7 @@ public class Spuzzle
 		return noIssues;
 	}
 
-	private int testSolve()
+	private int testSolve()//used only by tester, a.k.a. the static main of this class
 	{
 		int finds = 0;
 		while(true)
@@ -344,6 +344,26 @@ public class Spuzzle
 			if(findAnyUniqueTriple()){finds++;continue;}
 			if(findAnySoleQuad()){finds++;continue;}
 			if(findAnyUniqueQuad()){finds++;continue;}
+			break;
+		}
+		return finds;
+	}
+
+	public int Solve(int limit)
+	{
+		int finds = 0;
+		mainsolve:while(true)
+		{
+			if(fillHouses()){finds++;continue;}
+			if(findAnyUC()){finds++;continue;}
+			if(findAnySC()){finds++;continue;}
+			if(isFullySolved()){break;}//no need to bother...
+			for(int x=2;x<=limit;x++)
+			{//It's notably slower since the recursive method was implemented, see above function for how it used to be
+				//System.err.println("+++ Trying "+x+" +++");//for timing tests
+				if(SoleSetFinder(x)){finds++;continue mainsolve;}
+				if(UniqueSetFinder(x)){finds++;continue mainsolve;}
+			}
 			break;
 		}
 		return finds;
@@ -544,8 +564,8 @@ public class Spuzzle
 		return false;
 	}
 
-	/* trying to do the above recursively
-	public boolean SoleSetFinder(int n)//n is how many signs in set
+	// doing the above recursively
+	public boolean SoleSetFinder(int n)//n is how many signs in set exactly
 	{
 		if(n<=0)
 		{
@@ -555,36 +575,38 @@ public class Spuzzle
 		for(int h=0;h<Houses.length;h++)
 		{
 			if(Long.bitCount(Houses[h].ballot) > n)//trying to save time
-			{
+			{//each house is handled completely before the next house is even looked at
 				if(soleSetRec(n-1,signs.length,0L,h))
 				{return true;}
 			}
 		}
 		return false;
 	}
-
-	private boolean soleSetRec(int n, int a, long mask, int h)//only ever called by SoleSetFinder
+	private boolean soleSetRec(int n, int a, long mask, int hs)//only ever called by SoleSetFinder
 	{
+		//Possible timesave = bitwise-and the mask with house's ballot and return false if changed. (!Houses[hs].remains(mask))
+		if(!Houses[hs].remains(mask)){return false;}//Let's try that
+		//wow, this doesn't seem to help at all. Even at 6 it takes massive time
 		if(n==0)
 		{
 			int temp;
 			for(int i=0;i<a;i++)
 			{
-				temp = findSoleSet(h,(mask|candy[i]));
+				temp = findSoleSet(hs,(mask|candy[i]));
 				if(temp!=0){return (temp>0);}
 			}
 		}
 		else
 		{
 			assert n>0;
-			for(int i=n;i<a;i++)
+			for(int i=n;i<a;i++)//if no room below a, fors never run and the unfinished set returns false
 			{
-				if(soleSetRec(n-1,i,(mask|candy[i])))
+				if(soleSetRec(n-1,i,(mask|candy[i]),hs))
 				{return true;}
 			}
 		}
+		return false;
 	}
-	*/
 
 	public int findUniqueSet(int Hind, long mask)//from the set of cells containing these candidates, removes other candidates
 	{//House must be fullsized for this method to work
@@ -684,8 +706,47 @@ public class Spuzzle
 		return false;
 	}
 
-	/*
-	*/
+	// doing the above recursively
+	public boolean UniqueSetFinder(int n)//n is how many signs in set exactly
+	{
+		if(n<=0)
+		{
+			System.err.println("ERROR: USF called with invalid int ("+n+")");
+			return false;
+		}
+		for(int h=0;h<Houses.length;h++)
+		{
+			if(Long.bitCount(Houses[h].ballot) > n && Houses[h].cellArray.length==signs.length)//trying to save time
+			{//each house is handled completely before the next house is even looked at, and must be full-sized
+				if(uniqueSetRec(n-1,signs.length,0L,h))
+				{return true;}
+			}
+		}
+		return false;
+	}
+	private boolean uniqueSetRec(int n, int a, long mask, int h)//only ever called by UniqueSetFinder
+	{
+		//Possible timesave = bitwise-and the mask with house's ballot and return false if changed. (House[h].remains(mask))
+		if(n==0)
+		{
+			int temp;
+			for(int i=0;i<a;i++)
+			{
+				temp = findUniqueSet(h,(mask|candy[i]));
+				if(temp!=0){return (temp>0);}
+			}
+		}
+		else
+		{
+			assert n>0;
+			for(int i=n;i<a;i++)//if no room below a, fors never run and the unfinished set returns false
+			{
+				if(uniqueSetRec(n-1,i,(mask|candy[i]),h))
+				{return true;}
+			}
+		}
+		return false;
+	}
 
 	public String signpost(long q)//turn bitmask into string
 	{
@@ -754,6 +815,15 @@ public class Spuzzle
 			{svar++;}
 		}
 		return svar;
+	}
+
+	public boolean isFullySolved()
+	{
+		for(int i=0;i<rawcells.length;i++)
+		{
+			if(!rawcells[i].t){return false;}//at least 1 unsolved cell
+		}
+		return true;
 	}
 
 	public void roomservice()//in case of random desync, such as cosmic ray

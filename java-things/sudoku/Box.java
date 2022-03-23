@@ -198,14 +198,15 @@ public class Box
 		{eh = 0;}
 		Box MyBox = new Box(ab,h,v,p,eh);
 		MyBox.printBoard();
-		System.out.println(MyBox.solve()+" findings");
+		//System.out.println(MyBox.solve()+" findings");//uses this class' solver
+		System.out.println(MyBox.BoxPuzzle.Solve(MyBox.BoxAB.length/2)+" findings");//uses Spuzzle's solver
 		MyBox.printBoard();
 		System.out.println(MyBox.BoxPuzzle.countRemainingCells()+" cells unsolved");
 		System.out.println(MyBox.BoxPuzzle.countRottenBoroughs()+" rotten boroughs");
 	}
 
-	public int solve()
-	{
+	/*public int solve()
+	{//deprecated
 		int finds = 0;
 		while(true)
 		{
@@ -221,7 +222,7 @@ public class Box
 			break;
 		}
 		return finds;
-	}
+	}*/
 
 	public void printBoard()
 	{
