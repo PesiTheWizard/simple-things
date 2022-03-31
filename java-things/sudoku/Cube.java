@@ -10,6 +10,9 @@ public class Cube
 	private final Scell[] CubeCells;
 	private final Shouse[] CubeHouses;
 	private final Spuzzle Cube3D;
+	private final String topPrintLine;
+	private final String middlePrintLine;
+	private final String bottomPrintLine;
 
 	public Cube(String rawAB, String[] rawPF) throws Exception
 	{
@@ -94,7 +97,22 @@ public class Cube
 		CubeHouses = finHouseArray;//                                                            Line 4 established
 		Cube3D = new Spuzzle(Alphabet,CubeCells,CubeHouses);
 		if(!Cube3D.baseConfirm()){throw new Exception("baseConfirm error");}
-		//TODO:build print strings
+		//building print strings
+		String sS = "";
+		for(int i=0;i<shortLength;i++)
+		{
+			sS+=Spuzzle.lr;
+		}
+		String tS=Spuzzle.rd+sS, mS=Spuzzle.urd+sS, bS=Spuzzle.ur+sS;
+		for(int i=1;i<shortLength;i++)
+		{
+			tS+=(Spuzzle.lrd+sS);
+			mS+=(Spuzzle.X+sS);
+			bS+=(Spuzzle.ulr+sS);
+		}
+		topPrintLine=tS+Spuzzle.ld;
+		middlePrintLine=mS+Spuzzle.uld;
+		bottomPrintLine=bS+Spuzzle.ul;
 	}
 	private Scell[] charToCellConverter(char[] rca, int layer, long eMask) throws Exception//only called by constructor
 	{//expects Alphabet to be established
@@ -162,10 +180,51 @@ public class Cube
 			catch(IOException e){System.err.println(e);return;}
 		}
 		Cube MyCube = new Cube(ab,flr);
-		//Print
+		MyCube.printBoard();
 		System.out.println(MyCube.Cube3D.Solve(MyCube.Alphabet.length/2)+" findings");
-		//Print
+		MyCube.printBoard();
 		System.out.println(MyCube.Cube3D.countRemainingCells()+" cells unsolved");
 		System.out.println(MyCube.Cube3D.countRottenBoroughs()+" rotten boroughs");
+	}
+
+	public void printBoard()
+	{
+		final int bxs = Alphabet.length*Alphabet.length;
+		final int LRCC = bxs*shortLength;//layer-row cell count
+		StringBuilder op = new StringBuilder();
+		for(int a=0, b;a<shortLength;a++)//each layer-row
+		{
+			b = a*LRCC;//starting index for the layer-row
+			for(int i=0;i<shortLength;i++)
+			{op.append(topPrintLine);}
+			op.append("\n");
+
+			for(int i=0,buf2=b-Alphabet.length;i<Alphabet.length;i++)//think "columns down", b starts at 0
+			{
+				buf2+=Alphabet.length;//total of i*Alphabet.length within b, first loop brings it up to b
+				if(i%shortLength==0 && i>0)
+				{
+					for(int j=0;j<shortLength;j++)
+					{op.append(middlePrintLine);}
+					op.append("\n");
+				}
+				for(int j=0;j<shortLength;j++)
+				{//print a row, move an entire layer over, print another row...
+					for(int k=0,d=j*bxs+buf2;k<Alphabet.length;k++)//j*bxs+buf2 : index from which Alphabet.length characters are printed
+					{
+						if(k%shortLength==0)
+						{op.append(Spuzzle.ud);}//lines,boxes start with this
+						op.append(CubeCells[k+d].t?Alphabet[CubeCells[k+d].fe]:" ");
+					}
+					op.append(Spuzzle.ud);//line ends with this
+				}//each bump of j moves the index a whole layer, each addition to buf2 moves the index one "column" down
+				op.append("\n");//have printed Alphabet.length*shortLength chars, end of line
+			}
+
+			for(int i=0;i<shortLength;i++)
+			{op.append(bottomPrintLine);}
+			op.append("\n");
+		}
+		System.out.print(op);
 	}
 }
