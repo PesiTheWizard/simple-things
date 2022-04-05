@@ -256,7 +256,7 @@ public class Spuzzle
 		}
 		if(x.t)
 		{
-			System.err.println("ERROR: confirm was called on an already-confirmed cell");
+			System.err.println("ERROR: confirm was called on an already-confirmed cell ("+x+")");
 			return false;
 		}
 		x.fe=si;
