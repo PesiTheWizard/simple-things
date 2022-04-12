@@ -9,8 +9,9 @@ public class Samurai
 	private final Scell[] SamCellList;
 	private final Shouse[] SamHouseList;
 	private final Spuzzle SamuraiGrid;
+	private final int BW, BH, GW, GH;
 
-	public Samurai(String gAlphabet, int boxW, int boxH, int samW, int samH, String[] rawStrings) throws Exception
+	public Samurai(String gAlphabet, int boxW, int boxH, int samW, int samH, String[] rawStrings, int bonusHouses) throws Exception
 	{
 		final char gABarray[] = gAlphabet.toCharArray();
 		final int l = gABarray.length;
@@ -105,7 +106,7 @@ public class Samurai
 		int houseCount = 0;
 		for(int i=0;i<tpuzc;i++)
 		{
-			moProblems[i] = houseBuilder(cellPile[i],i,boxW,boxH,i%cakeLayer >= samW,cornerBoxIDs,emptyMask);
+			moProblems[i] = houseBuilder(cellPile[i],i,boxW,boxH,i%cakeLayer >= samW,cornerBoxIDs,emptyMask,bonusHouses);
 			houseCount+=moProblems[i].length;
 		}
 		Shouse allHouses[] = new Shouse[houseCount];
@@ -120,13 +121,23 @@ public class Samurai
 		if(houseCount != secondaryHouseCount)
 		{throw new Exception("Final house count failed ("+houseCount+" vs "+secondaryHouseCount+")");}
 		SamHouseList = allHouses;
+		BW = boxW;
+		BH = boxH;
+		GW = samW;
+		GH = samH;
 		SamuraiGrid = new Spuzzle(Alphabet,SamCellList,SamHouseList);
 		if(!SamuraiGrid.baseConfirm()){throw new Exception("baseConfirm error");}
+		/*deary me, time for the printstrings
+		needs a special case for boxlengths of 2
+		*/
 	}
-	private Shouse[] houseBuilder(Scell[] floorplan, int adr, int bX, int bY, boolean isInner, int[] cbIDs, long eM) throws Exception
+	private Shouse[] houseBuilder(Scell[] floorplan, int adr, int bX, int bY, boolean isInner, int[] cbIDs, long eM, int eH) throws Exception
 	{
 		final int l = Alphabet.length;
 		Scell prep[][][] = new Scell[3][l][l];//3 for rows, columns and boxes
+		eH = eH&3;//3 = only doing 2 extra houses
+		final int extras = Integer.bitCount(eH);
+		Scell bns[][] = new Scell[2][l];
 		for(int i=0,vDiv,vMod,bID,bRel;i<floorplan.length;i++)
 		{
 			if(floorplan[i]==null){throw new Exception("cellPile["+adr+"]["+i+"] is actually a null");}
@@ -137,6 +148,10 @@ public class Samurai
 			prep[0][vDiv][vMod] = floorplan[i];//row
 			prep[1][vMod][vDiv] = floorplan[i];//column
 			prep[2][bID][bRel] = floorplan[i];//boxes generated as normal for now...
+			if(vDiv+vMod+1 == l)//rising diagonal
+			{bns[0][vDiv] = floorplan[i];}
+			if(vDiv==vMod)//falling diagonal
+			{bns[1][vDiv] = floorplan[i];}
 		}//there's room for expanding into disjoint-box-sets if needed
 		if(isInner)
 		{//nullify corner boxes
@@ -145,7 +160,7 @@ public class Samurai
 			prep[2][cbIDs[2]]=null;
 			prep[2][cbIDs[3]]=null;
 		}
-		final int HC = l*3-(isInner?4:0);
+		final int HC = l*3-(isInner?4:0)+extras;
 		Shouse cHL[] = new Shouse[HC];//current house list
 		int geC = 0;
 		for(int i=0;i<3;i++)
@@ -157,6 +172,14 @@ public class Samurai
 					cHL[geC++] = new Shouse(prep[i][j],"Puzzle #"+(adr+1)+", "+houseType[i]+(j+1),eM);
 				}
 			}
+		}
+		if((eH&1)==1)
+		{
+			cHL[geC++] = new Shouse(bns[0],"Puzzle #"+(adr+1)+", rising diagonal",eM);
+		}
+		if((eH&2)==2)
+		{
+			cHL[geC++] = new Shouse(bns[1],"Puzzle #"+(adr+1)+", falling diagonal",eM);
 		}
 		if(geC!=HC)
 		{throw new Exception("houseBuilder can't count ("+geC+" vs "+HC+")");}
@@ -170,13 +193,15 @@ public class Samurai
 		try
 		{
 			readAB = in.readLine();
-			bxs = in.readLine().split(" ",2);//box sizes
+			bxs = in.readLine().split(" ");//box sizes
 			grds = in.readLine().split(" ",2);//grid sizes
 		}
 		catch(IOException e){System.err.println(e);return;}
-		int boxX, boxY, samX, samY;
+		int boxX, boxY, samX, samY, cR=0;
 		boxX = Integer.parseInt(bxs[0]);
 		boxY = Integer.parseInt(bxs[1]);
+		if(bxs.length >= 3)
+		{cR = Integer.parseInt(bxs[2]);}
 		samX = Integer.parseInt(grds[0]);
 		samY = Integer.parseInt(grds[1]);
 		final int pc=(samX*samY+(samX-1)*(samY-1));//puzzlecount
@@ -189,7 +214,7 @@ public class Samurai
 			}
 			catch(IOException e){System.err.println(e);return;}
 		}
-		Samurai MySamurai = new Samurai(readAB,boxX,boxY,samX,samY,rawinp);
+		Samurai MySamurai = new Samurai(readAB,boxX,boxY,samX,samY,rawinp,cR);
 		System.out.println(MySamurai.SamuraiGrid.Solve(MySamurai.Alphabet.length/2)+" findings");
 		System.out.println(MySamurai.SamuraiGrid.countRemainingCells()+" cells unsolved");
 		System.out.println(MySamurai.SamuraiGrid.countRottenBoroughs()+" rotten boroughs");
