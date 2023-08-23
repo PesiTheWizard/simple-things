@@ -1,0 +1,114 @@
+(define "KnightMovingSlideCapturingPiece"
+	(piece #1 Each
+		(or
+			{
+				("LeapToEmpty" "KnightWalk")
+				("StepToEnemy" #2 (then (set Counter)))
+				(move Hop #2
+					(between
+						(range 1 8)
+						if:(is Empty (between))
+					)
+					(to
+						if:("IsEnemyAt" (to))
+					)
+					(then (set Counter))
+				)
+			}
+		)
+	)
+)
+//------------------------------------------------
+(game "OrdaMirror" 
+	("TwoPlayersNorthSouth") 
+	(equipment { 
+		(board (square 8)) 
+
+		("ChessPawn" "Pawn" ~
+			(then
+				(and
+					("ReplayInMovingOn" (sites Mover "Promotion"))
+					(set Counter)
+				)
+			)
+		)
+		("KnightMovingSlideCapturingPiece" "Spear" Orthogonal)
+		("ChessKing" "Khan" (then (set Counter)) )
+		("KnightMovingSlideCapturingPiece" "Archer" Diagonal)
+		(piece "Keshig" Each
+			(or
+				("LeapCapture" "KnightWalk" (then (set Counter)) )
+				("StepToNotFriend")//issue - captures don't reset the counter
+			)
+		)
+		(piece "Eagle" Each
+			(or
+				(move Slide)
+				(move Leap "KnightWalk"
+					(to
+						if:("IsEnemyAt" (to))
+					)
+					(then (set Counter))
+				)
+			)
+		)
+
+		(regions "Promotion" P1 (sites Top))
+		(regions "Promotion" P2 (sites Bottom))
+	})
+	(rules
+		(start {
+			(place "Pawn1" (sites Row 2))
+			(place "Pawn2" (sites Row 5))
+			(place "Spear1" {"A1" "H1"}) (place "Keshig1" {"B1" "G1"}) (place "Archer1" {"C1" "F1"}) (place "Eagle1" coord:"D1") (place "Khan1" coord:"E1") 
+			(place "Spear2" {"A8" "H8"}) (place "Keshig2" {"B8" "G8"}) (place "Archer2" {"C8" "F8"}) (place "Eagle2" coord:"D8") (place "Khan2" coord:"E8") 
+		})
+
+		(play
+			(if "SameTurn"
+				(move Promote (last To) (piece {"Eagle" "Keshig" "Archer" "Spear"}) Mover)
+				(do
+					(forEach Piece)
+					ifAfterwards:(not ("IsInCheck" "Khan" Mover))
+				)
+			)
+		)
+		
+		(end {
+			("Checkmate" "Khan")
+			("PieceTypeReachWin" "Khan1" (sites Top) P1)
+			("PieceTypeReachWin" "Khan2" (sites Bottom) P2)//can these be combined via the regions?
+			(if (or (no Moves Mover) (= (counter) 99)) (result Mover Draw)) 
+		})
+	)
+)
+
+//------------------------------------------------------------------------------
+
+(metadata 
+	
+	(info
+		{
+		(description "Some description of some description")
+		(rules "Rules rule that rules rule")
+		(source "<a href=\"https://www.pychess.org/variants/ordamirror\" target=\"_blank\" class=\"style1\" style=\"color: #0000EE\" />Pychess.org</a>")
+		(version "1.3.12")
+		(credit "Couch Tomato")
+		(origin "This game was played on Pychess.org, from around 2020 to 2023.")
+		}
+	)
+	
+	(graphics {
+		(player Colour P1 (colour White))
+		(player Colour P2 (colour Gold))
+		(show Check "Khan")
+		(piece Scale "Pawn" 0.825)
+		(piece Families {"Defined" "Microsoft" "Pragmata"})
+		(board Style Chess)
+	})
+	
+	(ai 
+		"Chess_ai"
+	)
+	
+)
