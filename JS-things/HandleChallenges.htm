@@ -1,0 +1,374 @@
+<html>
+<head>
+<title>Handle challenges - Lichess API
+</title>
+<script>
+function lister(listedText, PN, ElType)
+{
+	const listEntry = document.createElement(ElType);
+	const entryText = document.createTextNode(listedText);
+	listEntry.appendChild(entryText);
+	PN.appendChild(listEntry);
+}
+function reasonUSP()
+{
+	const Dreason = document.getElementById("selDecReason");
+	if(Dreason===null)
+	{return null;}
+	const hURLo = new URLSearchParams();
+	hURLo.set('reason',Dreason.value);
+	return hURLo;
+}
+function HandleChallenge(actionSTR,ClBt)
+{
+	if(typeof(actionSTR)!=="string")
+	{
+		console.log("Argument must be a string");
+		return;
+	}
+	if(actionSTR!=="accept" && actionSTR!=="decline" && actionSTR!=="cancel")
+	{
+		console.log("Bad argument string");
+		return;
+	}
+	const LogAIDstr = actionSTR.concat("LogA")
+	const DLogA = document.getElementById(LogAIDstr);
+	if(DLogA===null)
+	{
+		console.log("Element ".concat(LogAIDstr," not found"));
+		return;
+	}
+	const DOAT = document.getElementById("OATbp");
+	if(DOAT===null)
+	{
+		DLogA.innerText = "Token textbox not found";
+		return;
+	}
+	const ChallIDstr = actionSTR.concat("ChallID");
+	const DCId = document.getElementById(ChallIDstr);
+	if(DCId===null)
+	{
+		DLogA.innerText = "challengeId textbox not found";
+		return;
+	}
+	const STTSstr = actionSTR.concat("STTS");
+	const Dstts = document.getElementById(STTSstr);
+	const HDRSstr = actionSTR.concat("HDRS");
+	const Dhdrs = document.getElementById(HDRSstr);
+	const SVARstr = actionSTR.concat("SVAR");
+	const Dsvar = document.getElementById(SVARstr);
+	if(Dstts===null || Dhdrs===null || Dsvar===null)
+	{
+		DLogA.innerText = "Response element not found";
+		return;
+	}
+	const txtOAT = DOAT.value.trim();
+	if(txtOAT.length===0)
+	{
+		DLogA.innerText = "OAuth token missing";
+		return;
+	}
+	const txtCId = DCId.value.trim();
+	if(txtCId.length===0)
+	{
+		DLogA.innerText = "challengeId missing";
+		return;
+	}
+	ClBt.disabled = true;
+	const EndpointURL = `https://lichess.org/api/challenge/${txtCId}/${actionSTR}`;
+	const tc = "Bearer ".concat(txtOAT);
+	let temp = null;
+	if(actionSTR==="decline")
+	{temp = reasonUSP();}
+	const sv = temp?{'method':'POST','headers':{'Authorization':tc},'body':temp}:{'method':'POST','headers':{'Authorization':tc}};
+	DLogA.innerText = actionSTR.concat("-ing ",txtCId,"...");
+	FetchAndText(EndpointURL,sv,DLogA,Dstts,Dhdrs,Dsvar,actionSTR.concat("-ing",txtCId),ClBt);
+}
+function FetchAndText(Endpoint,opts,LogA,stts,hdrs,svar,msg,clbt)
+{
+	stts.innerText = "awaiting response...";
+	hdrs.innerHTML = "";
+	svar.innerText = "";
+	fetch(Endpoint,opts).then((response) => {
+		stts.innerText = "Response code = ".concat(response.status);
+		for(let [k,v] of response.headers){lister(`${k} : ${v}`,hdrs,'li');}
+		return response.text();
+	}).then((response) => {
+		svar.innerText = response;
+	}).then(() => {
+		LogA.innerText = "Done ".concat(msg);
+		clbt.disabled = false;
+	}).catch((error) => {
+		LogA.innerText = "Error ".concat(msg);
+		console.log(error);
+		clbt.disabled = false;
+	});
+}
+function CreateChallenge(ClBt)
+{
+	const DLogA = document.getElementById("CreLogA");
+	if(DLogA===null)
+	{
+		console.log("Element CreLogA not found");
+		return;
+	}
+	const DOAT = document.getElementById("OATbp");
+	if(DOAT===null)
+	{
+		DLogA.innerText = "Token textbox not found";
+		return;
+	}
+	const Dstts = document.getElementById("CreSTTS");
+	const Dhdrs = document.getElementById("CreHDRS");
+	const Dsvar = document.getElementById("CreSVAR");
+	if(Dstts===null || Dhdrs===null || Dsvar===null)
+	{
+		DLogA.innerText = "Response element not found";
+		return;
+	}
+	const txtOAT = DOAT.value.trim();
+	if(txtOAT.length===0)
+	{
+		DLogA.innerText = "OAuth token missing";
+		return;
+	}
+	const txtUserName = document.getElementById("CCusername").value.trim();
+	if(txtUserName.length===0)
+	{
+		DLogA.innerText = "username missing";
+		return;
+	}
+	const SPs = makeSP();
+	const sConf = buildChallConfMessage(SPs,txtUserName);
+	if(confirm(sConf))
+	{
+		const EndpointURL = `https://lichess.org/api/challenge/${txtUserName}`;
+		const tc = "Bearer ".concat(txtOAT);
+		const sv = {'method':'POST','headers':{'Authorization':tc},'body':SPs};
+		const Msg = "challenging ".concat(txtUserName);
+		DLogA.innerText = Msg.concat("...");
+		//TODO FetchAndJSON here
+		//FetchAndJSON(Endpoint,opts,LogA,stts,hdrs,svar,msg,clbt)
+	}
+	else
+	{
+		DLogA.innerText = "Manual cancel";
+	}
+}
+function FetchAndJSON(Endpoint,opts,LogA,stts,hdrs,svar,msg,clbt)
+{
+	stts.innerText = "awaiting response...";
+	hdrs.innerHTML = "";
+	svar.innerHTML = "";
+	fetch(Endpoint,opts).then((response) => {
+		stts.innerText = "Response code = ".concat(response.status);
+		for(let [k,v] of response.headers){lister(`${k} : ${v}`,hdrs,'li');}
+		return response.json();
+	}).then((response) => {
+		const keylist = Object.keys(response);
+		rb(response,keylist,svar);
+	}).then(() => {
+		LogA.innerText = "Done ".concat(msg);
+		clbt.disabled = false;
+	}).catch((error) => {
+		LogA.innerText = "Error ".concat(msg);
+		console.log(error);
+		clbt.disabled = false;
+	});
+}
+function rb(r,k,hn)
+{
+	const los = k.length;
+	for(let i=0;i<los;i++)
+	{
+		resp(k[i],r[k[i]],hn);
+	}
+}
+function resp(f,s,a)
+{
+	const ft = document.createElement('dt');
+	const st = document.createElement('dd');
+	const fti = document.createTextNode(f);
+	let sti;
+	if(s==null)//needed to prevent crash because typeof(null) is object
+	{
+		sti = document.createTextNode("ø");
+	}
+	else if(typeof(s)=="object")
+	{
+		sti = document.createElement('dl');
+		rb(s,Object.keys(s),sti);
+	}
+	else//assumed to be string
+	{
+		sti = document.createTextNode(s);
+	}
+	ft.appendChild(fti);
+	st.appendChild(sti);
+	a.appendChild(ft);
+	a.appendChild(st);
+}
+function makeSP()
+{
+	const bRated = document.getElementById("CCchkRated").checked;
+	const iClkLim = parseInt(document.getElementById("CCtxtClkLim").value.trim());
+	const iClkInc = parseInt(document.getElementById("CCtxtClkInc").value.trim());
+	const bDays = document.getElementById("CCchkDays").checked;
+	const iDays = parseInt(document.getElementById("CCselDays").value);
+	const sColor = document.getElementById("CCselColor").value;
+	const sVariant = document.getElementById("CCselVariant").value;
+	const bRules = document.getElementById("CCchkRules").checked;
+	const sRules = document.getElementById("CCtxtRules").value.trim();
+	const hURLo = new URLSearchParams();
+	hURLo.set('rated',bRated);
+	if(bDays)//correspondance game
+	{
+		hURLo.set('days',iDays);
+	}
+	else//clock instead
+	{
+		hURLo.set('clock.limit',iClkLim);
+		hURLo.set('clock.increment',iClkInc);
+	}
+	hURLo.set('color',sColor);
+	hURLo.set('variant',sVariant);
+	//fen here
+	if(bRules)
+	{
+		hURLo.set('rules',sRules);
+	}
+	return hURLo;
+}
+function buildChallConfMessage(SPobj,oppName)
+{
+	let M = `Challenge ${oppName} with these parameters?`;
+	for(const [key,value] of SPobj)
+	{
+		M=M.concat("\n",key,":\t",value);
+	}
+	return M;
+}
+function ListYourChallenges(ClBt)
+{
+	const DLogA = document.getElementById("GetLogA");
+	if(DLogA===null)
+	{
+		console.log("Element GetLogA not found");
+		return;
+	}
+	const DOAT = document.getElementById("OATcr");
+	if(DOAT===null)
+	{
+		DLogA.innerText = "Token textbox not found";
+		return;
+	}
+	const Dstts = document.getElementById("GetSTTS");
+	const Dhdrs = document.getElementById("GetHDRS");
+	const Dsvar = document.getElementById("GetSVAR");
+	if(Dstts===null || Dhdrs===null || Dsvar===null)
+	{
+		DLogA.innerText = "Response element not found";
+		return;
+	}
+	const txtOAT = DOAT.value.trim();
+	if(txtOAT.length===0)
+	{
+		DLogA.innerText = "OAuth token missing";
+		return;
+	}
+	ClBt.disabled = true;
+	const EndpointURL = "https://lichess.org/api/challenge";
+	const tc = "Bearer ".concat(txtOAT);
+	const sv = {'method':'GET','headers':{'Authorization':tc}};
+	const Msg = "getting challenges";
+	DLogA.innerText = Msg.concat("...");
+	FetchAndJSON(EndpointURL,sv,DLogA,Dstts,Dhdrs,Dsvar,Msg,ClBt);
+}
+</script>
+<style>
+th
+{
+	white-space: nowrap;
+}
+dl
+{
+	border-left: 1px dotted;
+}
+</style>
+</head>
+<body>
+<table border=1>
+<tr>
+<td><input type=password id="OATcr" size=30><br>(challenge:read)</td>
+<td colspan=4><input type=password id="OATbp" size=30><br>(challenge:write or bot:play or board:play)</td>
+</tr>
+<tr>
+<th>List your challenges</th><th>Create a challenge</th><th>Accept a challenge</th><th>Decline a challenge</th><th>Cancel a challenge</th>
+</tr>
+<tr>
+<td valign=top><input type=button value="Get challenges" onclick=ListYourChallenges(this)><br>
+<div id="GetLogA">Log space</div><hr>
+<div id="GetSTTS"></div><ul id="GetHDRS"></ul><dl id="GetSVAR"></dl></td>
+<td valign=top>username = <input type=text id="CCusername"><br>
+<input type=checkbox id="CCchkRated">rated?<br>
+clock.limit = <input type=text size=10 id="CCtxtClkLim" value="120"><br>
+clock.increment = <input type=text size=9 id="CCtxtClkInc" value="1"><br>
+<input type=checkbox id="CCchkDays">days = <select id="CCselDays">
+<option value="1" selected>1</option>
+<option value="2">2</option>
+<option value="3">3</option>
+<option value="5">5</option>
+<option value="7">7</option>
+<option value="10">10</option>
+<option value="14">14</option>
+</select><br>
+color = <select id="CCselColor">
+<option value="random" selected>random</option>
+<option value="white">white</option>
+<option value="black">black</option>
+</select><br>
+variant = <select id="CCselVariant">
+<option value="standard" selected>standard</option>
+<option value="chess960" disabled>chess960</option>
+<option value="crazyhouse" disabled>crazyhouse</option>
+<option value="antichess" disabled>antichess</option>
+<option value="atomic" disabled>atomic</option>
+<option value="horde" disabled>horde</option>
+<option value="kingOfTheHill" disabled>kingOfTheHill</option>
+<option value="racingKings" disabled>racingKings</option>
+<option value="threeCheck" disabled>threeCheck</option>
+<option value="fromPosition" disabled>fromPosition</option>
+</select><br>
+<input type=checkbox id="CCchkRules">Rules = <input type=text id="CCtxtRules" value="noRematch"><br>
+<input type=button value="Create challenge" onclick=CreateChallenge(this)><br>
+<div id="CreLogA">Log space</div><hr>
+<div id="CreSTTS"></div><ul id="CreHDRS"></ul><dl id="CreSVAR"></dl></td>
+<td valign=top>challengeId = <input type=text id="acceptChallID"><br>
+<input type=button value="Accept challenge" onclick=HandleChallenge("accept",this)><br>
+<div id="acceptLogA">Log space</div><hr>
+<div id="acceptSTTS"></div><ul id="acceptHDRS"></ul><pre id="acceptSVAR"></pre></td>
+<td valign=top>challengeId = <input type=text id="declineChallID"><br>
+reason = <select id="selDecReason">
+<option value="generic" selected>generic</option>
+<option value="later">later</option>
+<option value="tooFast">tooFast</option>
+<option value="tooSlow">tooSlow</option>
+<option value="timeControl">timeControl</option>
+<option value="rated">rated</option>
+<option value="casual">casual</option>
+<option value="standard">standard</option>
+<option value="variant">variant</option>
+<option value="noBot">noBot</option>
+<option value="onlyBot">onlyBot</option>
+</select><br>
+<input type=button value="Decline challenge" onclick=HandleChallenge("decline",this)><br>
+<div id="declineLogA">Log space</div><hr>
+<div id="declineSTTS"></div><ul id="declineHDRS"></ul><pre id="declineSVAR"></pre></td>
+<td valign=top>challengeId = <input type=text id="cancelChallID"><br>
+<input type=button value="Cancel challenge" onclick=HandleChallenge("cancel",this)><br>
+<div id="cancelLogA">Log space</div><hr>
+<div id="cancelSTTS"></div><ul id="cancelHDRS"></ul><pre id="cancelSVAR"></pre></td>
+</tr>
+</table>
+</body>
+</html>
