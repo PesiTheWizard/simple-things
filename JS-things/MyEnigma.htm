@@ -1,0 +1,183 @@
+<html>
+<head>
+<title>Enigma
+</title>
+<script>
+function stringSplitter(s)
+{
+	if(typeof(s)!="string")
+	{throw new Error("stringSplitter takes a string");}
+	const skil = [];
+	for(let i=0;i<s.length;i++)
+	{skil.push(s.charAt(i));}
+	return skil;
+}
+const alphabet = stringSplitter("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+function rotorify(s)
+{
+	if(typeof(s)!="string")
+	{throw new Error("rotorify takes a string");}
+	const splitArray = stringSplitter(s);
+	//check for repeats, maybe
+	const t1=[],t2=[];
+	for(let i=0;i<splitArray.length;i++)
+	{
+		t1[i]=alphabet.indexOf(splitArray[i]);
+		t2[i]=splitArray.indexOf(alphabet[i]);
+	}
+	return {forward:t1,backward:t2};
+}
+const IC = rotorify("DMTWSILRUYQNKFEJCAZBPGXOHV");
+const IIC = rotorify("HQZGPJTMOBLNCIFDYAWVEUSRKX");
+const IIIC = rotorify("UQNTLSZFMREHDPXKIBVYGJCWOA");
+const I = rotorify("EKMFLGDQVZNTOWYHXUSPAIBRCJ");//Q
+const II = rotorify("AJDKSIRUXBLHWTMCQGZNPYFVOE");//E
+const III = rotorify("BDFHJLCPRTXVZNYEIWGAKMUSQO");//V
+const IV = rotorify("ESOVPZJAYQUIRHXLNFTGKDCMWB");//J
+const V = rotorify("VZBRGITYUPSDNHLXAWMJQOFECK");//Z
+const VI = rotorify("JPGVOUMFYQBENHZRDKASXLICTW");//ZM
+const VII = rotorify("NZJHGRCXMYSWBOUFAIVLPEKQDT");//ZM
+const VIII = rotorify("FKQHTLXOCBJSPDZRAMEWNIUYGV");//ZM
+const UKW_A = rotorify("EJMZALYXVBWFCRQUONTSPIKHGD");
+const UKW_B = rotorify("YRUHQSLDPXNGOKMIEBFZCWVJAT");
+const UKW_C = rotorify("FVPJIAOYEDRZXWGCTKUQSBNMHL");
+function simulPath(L)
+{
+	const thirdRotor = III;
+	const secondRotor = II;
+	const firstRotor = I;
+	const reflector = UKW_B;
+	let R = alphabet.indexOf(L);
+	/*R = firstRotor.forward[R];
+	R = secondRotor.forward[R];
+	R = thirdRotor.forward[R];
+	R = reflector.forward[R];
+	R = thirdRotor.backward[R];
+	R = secondRotor.backward[R];
+	R = firstRotor.backward[R];*/
+
+	R = thirdRotor.forward[R];
+	R = secondRotor.forward[R];
+	R = firstRotor.forward[R];
+	R = reflector.forward[R];
+	R = firstRotor.backward[R];
+	R = secondRotor.backward[R];
+	R = thirdRotor.backward[R];
+	return alphabet[R];
+}
+function dostuff()
+{
+	const inp = document.getElementById("standardin").value.trim().toUpperCase();
+	const outp = document.getElementById("standardout");
+	let sb = "";
+	for(let i=0;i<inp.length;i++)
+	{
+		sb+=simulPath(inp.charAt(i));
+	}
+	outp.innerText = sb;
+}
+function arrayCopy(a)
+{//actually unneeded, just add ring-setting offset to number before going through rotor
+	if(!Array.isArray(a))
+	{throw new Error("arrayCopy must take array");}
+	const svar = new Array(a.length);
+	for(let i=0;i<a.length;i++)
+	{svar[i] = a[i];}
+	return svar;
+}
+class EnigmaRotor
+{
+	forward;
+	backward;
+	turnover;
+	ringSetting;
+	position;
+	constructor()
+	{
+		//
+	}
+	DaisyTick(b)
+	{
+		if(b)
+		{
+			this.position = (this.position+1)%26;
+			return (this.notches.indexOf(this.position) >= 0);
+		}
+		return false;
+	}
+}
+class EnigmaMachine
+{
+	#Factorials;
+	#Alphabet;
+	Rotors;
+	Reflector;
+	constructor(ab)
+	{
+		this.#Alphabet = this.stringSplitter(ab);
+		if(this.#Alphabet.length < 2)
+		{throw new Error("Alphabet too short");}
+		this.Rotors = [];
+		this.#Factorials = [1n];
+		for(let i=0;i<65;i++)
+		{
+			this.#Factorials.push(this.#Factorials[this.#Factorials.length-1]*BigInt(this.#Factorials.length));
+		}
+	}
+	stringSplitter(s)
+	{
+		if(typeof(s)!="string")
+		{throw new Error("stringSplitter takes a string");}
+		const skil = [];
+		for(let i=0;i<s.length;i++)
+		{skil.push(s.charAt(i));}
+		for(let i=0;i<skil.length;i++)
+		{
+			for(let j=i+1;j<skil.length;j++)
+			{
+				if(skil[i] == skil[j])
+				{throw new Error("Duplicate in string");}
+			}
+		}
+		return skil;
+	}
+	rotate()
+	{
+		if(!Array.isArray(this.Rotors))
+		{
+			console.exeption("Rotors should be an array");
+			return;
+		}
+		const L = this.Rotors.length;
+		if(L === 0)
+		{
+			console.warn("No rotors present");
+			return;
+		}
+		if(L === 1)
+		{
+			//Just rotate it
+		}
+		else//length > 1
+		{
+			//Do the bitmask shift thing
+			/*
+			let bitM = 0n;
+			for(let i = 1;i<L;i++)
+			{
+			}
+			*/
+		}
+	}
+	runPath()
+	{
+		//
+	}
+}
+</script>
+</head>
+<body>
+<input type="text" id="standardin" value="YTHMYIURFGW"> <input type="button" value="send" onClick=dostuff()><br>
+<pre id="standardout"></pre>
+</body>
+</html>
