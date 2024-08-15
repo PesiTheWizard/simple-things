@@ -1,0 +1,5 @@
+Dylan Beattie, what a delightful cocktail of pretension and mediocrity you've brewed here! Calling yourself a "Developer, speaker, musician" is a bold move — are you hoping that one of those hats will distract us from the fact that your repos have fewer stars than my high school band?
+
+Your love for distributed systems is sweet, but maybe you should distribute some of that enthusiasm to the projects languishing in the shadows with a total of zero stargazers. You’ve dabbled in everything from JavaScript to CSS, yet your most shining contribution is a programming language named Rockstar. I guess you’re living proof that you can be as overrated as the '80s rock music you seem to cherish.
+
+And while we're on the topic of hobbies, what's with the cats, hats, and Legos? Trying to craft a quirky persona to distract from your average coding skills? Spoiler alert: it’s not working. Maybe focus on fewer “interests” and more contributions that don’t make you look like a distracted jack-of-all-trades. The only thing more uninspired than your repo descriptions is the 2 stars on “freeasinweekend.org” — perhaps take a hint from that and rethink your life choices.
