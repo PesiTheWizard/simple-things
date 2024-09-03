@@ -1,0 +1,5163 @@
+//misc bugs - pawns can en-passant their own team if same team moves twice in a row
+var flip = 0;
+var sqrSize = 33;
+var positionSetup = 0;
+var whitePrefix = "White";
+var blackPrefix = "Black";
+var graphSuffix = "png";
+var realColor = "";
+var useMarkers = 0;
+var noCounts = 0;
+var markerDir = "./";//"http://www.chessvariants.com/membergraphics/MSelven-chess/";
+const hand = new Array();
+let board = new Array();//RandomSetup may reset (line 4108), GaugeValues does temp-store-and-replace
+const shadow = new Array();
+const moves = new Array();//piece betza move-strings(3rd part of definition)
+const imag = new Array();//piece image-file names(4th part of definition)
+const ids = new Array();//piece ID-letters(2nd part of definition)
+const names = new Array();//piece names(1st part of definition)
+const startSqr = new Array();//piece starting setup squares(5th part of definition)
+const xStep = new Array();
+const yStep = new Array();
+const vector = new Array();
+const ranges = new Array();
+const flags = new Array();
+const skip = new Array();
+const first = new Array();
+const sanMoves = new Array();
+const diagDesc = new Array();//the saved InnerHTML of the idiagram nodes; values set in Init(once), read in Init(once) and ParseGameDef(once)
+const choice = new Array();
+const royal = new Array();//also a parameter in TryEP
+const royalness = new Array();
+const royalCount = new Array();
+const strength = new Array();
+const imitator = new Array();
+const promoDepth = new Array();
+const asym = new Array();
+const loc = new Array();
+var shooters;//initialized in ParseGameDef only if Setup isn't a funct, possible error path?
+var oldImag = '';
+var oddShade = 0;
+var clocks = 0;
+var chatID = 0;
+var rank1 = 1;
+var file1 = 1;
+var timer = 0;
+var sequel = 0;
+var sequel2 = 0;
+var pacify = 0;
+var pacoMode = 0;
+var extinction = 0;
+var enforceRules = 0;
+var activePlayer = 0;
+var castleGap = 1;
+var handSwap = 0;
+var weird = 0;
+var hopsel = 0;
+var atomic = 0;
+var paralyze = 0;
+var track;
+var valueOverride, matrix;
+var CustomPromotion;//function-var
+var CustomZone;//function-var
+var moveList, rimColor, borders, coordColor;
+const useAI = new Array();//assignments only happen in the page itself, set up by CreateAnchors
+var active = -1;
+if(typeof(scriptSeen) == 'undefined')
+{
+	scriptSeen = 7;
+	timer = setTimeout("Init();", 100);
+}
+
+function Init()
+{
+	"use strict";//one let needed
+	//console.log("Init");
+	let err = 3;//added let for sake of strict mode
+	ids[0] = '?';
+	if(document.getElementById('board') == null)
+	{
+		var dl = document.getElementsByClassName('idiagram');
+		var i;
+		const nrDiags = dl.length;//only used here
+		for(i=0; i<nrDiags; i++) diagList[i] = dl[i];
+		var diag = document.getElementById('diagram');
+		if(diag != null) diagList[i++] = diag;
+		if(i == 0) return; // page contains no diagram
+		active = (i == 1 ? 0 : -1);
+		while(i-- > 0)
+		{
+			diagDesc[i] = diagList[i].innerHTML;//saving the idiagram code to higher array, because its insides will be erased soon
+			if(i == nrDiags && nrDiags > 0) diagList[i].parentElement.style.cssFloat = 'none';
+			err = ParseGameDef(i); // try to fetch game definition from HTML body
+		//ParseGameDef is making i global-scoped!
+			if(err == 1)
+			{
+				diagList[i].innerHTML += `<h1>Cannot make a diagram with ${nType} pieces on an ${files}x${ranks} board!</h1><pre>${diagDesc[i]}</pre>`;
+				continue;
+			}
+			CreateAnchors(diagList[i], i);
+			CreateBoard(i, err);
+			BetzaCompile();
+			Display();
+			if(moveList)
+			{
+				var p = document.getElementById('aiGame' + i);
+				if(p) p.innerHTML = moveList, PasteGame(i);
+			}
+		}
+	}
+	// the following is only for navigation on pages with single diagram
+	for(i=0; i<ranks; i++) for(j=0; j<ranks; j++) start[i][j] = board[i][j];
+	for(i=0; i<=2*nType; i++) startHand[i] = hand[i];
+	var bar = document.getElementById('buttonbar');
+	if(bar != null) bar.innerHTML = buttonBar;
+	if(typeof(CreateChat) == 'function') CreateChat(); // optional chat on page
+	if(clocks) ClockTick();
+}
+//other global vars moved up here
+const buttonBar = '<input type="button" onclick="FlipView()" value="Flip View"> <input class="step" type="button" onclick="Seek(0)" value="|<"> <input class="step" type="button" onclick="Seek(10001)" value="<"> <input class="step" type="button" onclick="Seek(10002)" value=">"> <input class="step" type="button" onclick="Seek(10003)" value=">>"> <input class="step" type="button" onclick="Seek(10000)" value=">|"> ';
+//The line above starts without whitespace, ends with whitespace
+const diagList = new Array();//becomes a list of DOM-nodes with the class "idiagram"
+var typ2;
+let initDone = 0;//only used by ParseGameDef
+var mySeed = 123456789;
+const lastShuffle = new Array();
+var haveShuffle = 0;
+var placement = 0;
+var hx1 = -1;
+var hy1 = 0;
+var hx2 = -1;
+var hy2 = 0;
+var zonal = 0, san = 0, sanX, sanY, movedPiece, movedX, movedY, captPiece, imitatedType;
+var xx = -1;
+var yy = -1;
+var ex = -1;
+var ey = -1;
+var px = -1;
+var py = -1;
+var flagX = -1;
+var flagY = -1;
+var lastX = 0;
+var lastY = 0;
+var phase;
+var curCell;
+var obstacle = 0, emulateHover = 0;
+var clicks, nc = 0, selected, promoMove;
+var downX;
+var downY;
+var noMouse = 0;
+var down = 0;
+var drag, draggedPiece;
+
+// Game navigation section
+
+const start = new Array();
+const startHand = new Array();
+var game = new Array();//redefined in ParseGame()?
+let comments = new Array();//remade by the newgame funct
+const scores = new Array();
+var gameLen = 0;
+var displayed = 0;
+var recordSize = 1;
+var seeking;
+
+// Client section
+
+/*
+var request;
+request = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP.3.0");
+*/
+var fetchRequest = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP.3.0");
+var pvRequest = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP.3.0");
+var date = new Date();
+fetchRequest.onreadystatechange = function() { if(this.readyState == 4 && this.status == 200) FetchCallback(); };
+pvRequest.onreadystatechange = function() { if(this.readyState == 4) { if(this.status == 200) NextPV(); else pvCount = 0; } };
+var listToggle = 0;
+var gameNr = 0;
+var players = "";
+var serverLen = 0;
+var ticks = 0;
+var elapsed = 0;
+var tickInterval = 5;
+var activeClock = -1;
+const clockTimes = new Array();
+const gameTimes = new Array();
+var refreshCnt = 0;
+var pvTarget, pvCount = 0;
+
+// Betza compilation section
+
+var broken, lastS;
+const count = new Array();
+var movePtr = 100, freeCastling, locust;
+var checkFlag = 0, testFlag = 0, blockFlag = 0;
+var msp = 0;
+const moveStack = new Array();
+const moveType = new Array();
+var kills, eps; // locust-square stack
+const killX = new Array();
+const killY = new Array();
+var hop, s, stm, imi, imiMask, ep, throughCheck, khit, kind, frozen;
+let bMap = new Array();//reset on line 3402
+let Emit;//function pointer to either MyStack, StackMove or Count at various times
+var dd;//set in NewInner, read in MyStack
+const pieceValue = new Array();
+const baseValue = new Array();
+var center, nodes = 0, threshold, depth = 5;
+const captCodes = new Array();
+const code = new Array();//looks like this is never read
+const wave = [0, 1, 1, 1, 0, -1, -1, -1, 0, 1];//only used in ScoreMove
+var xply;
+var NewMakeMove = OrigMakeMove;
+var UnMake = OrigUnMake;//OrigUnMake is a function!
+var nodeCnt, ms = [];//nodeCnt never mentioned again, only read of ms is commented out
+var points, wDens, bDens, dist, fdia;//points never mentioned again
+var bb = new Array();//redefined within functs?
+const bb2 = new Array();
+const pClass = new Array();
+var gauged = -1;
+var visited;
+var oldLast = null;//only set in AutoReply, never read. Why does this exist?
+var text = [], lastLine, lastPiece;
+const spare = new Array();
+var spareInit = 0;
+var touched = 0, lastReq = 0;
+var oldMessage = '&nbsp;';//only used by ShowMoves2
+var midX = 1, midY = 1;
+let printable = 0;
+var lastPiece = 2;
+
+function ParseGameDef(dnr)//called by Init and SwitchDiag
+{
+	//"use strict";//complains about shady, ai, nobility, xzonal, castleFlip, holeColor, ranks, files, coords, exemption, newcl, background, thresholdPiece, autoGate, holdingsType, maxPromote, promoZone, promoOffset, promoChoice, shuffle, satellite, contageon, captMatrix, succession, shades, convert, counterbare, stalemate, haveRoyal, light, dark, graphDir, gameDef, nType, handOffs, hSwap, symmetry
+	console.log("ParseGameDef",dnr);
+	var n = 0, m = 0;
+	active = dnr;
+	hx1= hx2 = -1;
+	movedPiece = 1024;
+	movedX = movedY = -1;
+	ai = rank1 = file1 = shady = castleGap = 1;//ai is set in this function, subsequently read only in CreateAnchors;shady only read in OwnShade
+	castleFlip = xzonal = nobility = -1;
+	freeCastling = oddShade = 0;
+	moveList = '';
+	rimColor = '#FFFFFF';
+	holeColor= '#000000';
+	coordColor = 'black';
+	realColor = '';
+	borders = 1;
+	if(typeof(Setup) != 'function')
+	{ // HTML header contains no script; set defaults
+		ranks = 8;
+		files = 8;
+		coords = -1;
+		holdingsType = autoGate = thresholdPiece = background = newcl = exemption = 0;
+		extinction = 3;
+		var sym = 'mirror';
+	//	CustomZone = CustomPromotion = null;
+		promoZone = maxPromote = 1;
+		promoOffset = 0;
+		promoChoice = 'QNRB';
+		shuffle = '';
+		satellite = 'piece';
+		contageon = '';
+		valueOverride = [];
+		shooters = [];//no game def override option
+		for(var i=0; i<512; i++) royal[i] = royalness[i] = 0;
+		haveRoyal = stalemate = counterbare = convert = shades = succession = weird = zonal = captMatrix = handSwap = hopsel = atomic = 0;//shades,weird,zonal,hopsel have no game def override option
+		useMarkers = 0; // mild checkering line begins?
+		light = "#FFFFFF";
+		dark = "#E0E0E0"; // mild checkering
+		graphDir = "/membergraphics/MSinteractive-diagrams/";
+		graphSuffix = "pgn";
+		whitePrefix = "w";
+		blackPrefix = "b";
+	}
+	// get definition
+	var text = diagDesc[dnr];//Init set this as the idiagram's internal HTML
+	if(text == '') return 2; // no game definition in HTML body
+	gameDef = text.split('\n');
+	for(var i=0; i<gameDef.length; i++)
+	{
+		for(j=0; gameDef[i][j] == ' '; j++); gameDef[i] = gameDef[i].substring(j); // strip leading spaces//possibly something wrong here
+		var words = gameDef[i].split('<br>');
+		if(words.length > 1) gameDef[i] = words[0]; // strip trailing <br> (for phpBB)
+		words = gameDef[i].split('=');
+		for(j=2; j<words.length; j++) words[1] += '=' + words[j];
+		if(words.length > 1)
+		{ // opportunity to overrule defaults
+			if(words[0] == 'files') files = parseInt(words[1]), midX = files >> 1; else
+			if(words[0] == 'ranks') ranks = parseInt(words[1]), midY = ranks-1 >> 1; else
+			if(words[0] == 'holdingsType') holdingsType = parseInt(words[1]); else
+			if(words[0] == 'handSwap') handSwap = parseInt(words[1]); else
+			if(words[0] == 'promoZone') promoZone = parseInt(words[1]); else
+			if(words[0] == 'maxPromote') maxPromote = parseInt(words[1]); else
+			if(words[0] == 'promoChoice') promoChoice = words[1]; else
+			if(words[0] == 'morph') SetMorph(words[1], n); else
+			if(words[0] == 'contageous') contageon = words[1]; else
+			if(words[0] == 'promoOffset') promoOffset = parseInt(words[1]); else
+			if(words[0] == 'graphicsDir') graphDir = words[1]; else
+		//	if(words[0] == 'markerDir') markerDir = words[1]; else
+			if(words[0] == 'lightShade') light = words[1]; else
+			if(words[0] == 'darkShade') dark = words[1]; else
+			if(words[0] == 'oddShade') oddShade = words[1]; else
+			if(words[0] == 'startShade') { realColor = dark; dark = words[1]; } else
+			if(words[0] == 'holeColor') holeColor = words[1]; else
+			if(words[0] == 'rimColor') rimColor = words[1]; else
+			if(words[0] == 'coordColor') coordColor = words[1]; else
+			if(words[0] == 'borders') borders = parseInt(words[1]); else
+			if(words[0] == 'background') background = words[1]; else
+			if(words[0] == 'shady') shady = parseInt(words[1]); else
+			if(words[0] == 'enforceRules') enforceRules = parseInt(words[1]); else
+			if(words[0] == 'zonal') xzonal = parseInt(words[1]); else
+			if(words[0] == 'paralyze') paralyze = parseInt(words[1]); else
+			if(words[0] == 'midX') midX = parseInt(words[1]); else
+			if(words[0] == 'midY') midY = parseInt(words[1]); else
+			if(words[0] == 'newClick') newcl = parseInt(words[1]); else
+			if(words[0] == 'trackPieces') track = parseInt(words[1]); else
+			if(words[0] == 'squareSize') sqrSize = words[1]; else
+			if(words[0] == 'symmetry') sym = words[1]; else
+			if(words[0] == 'graphicsType') graphSuffix = words[1]; else
+			if(words[0] == 'whitePrefix') whitePrefix = words[1]; else
+			if(words[0] == 'blackPrefix') blackPrefix = words[1]; else
+			if(words[0] == 'satellite') satellite = words[1]; else
+			if(words[0] == 'royal') haveRoyal += ',' + words[1]; else
+			if(words[0] == 'iron') royalness[parseInt(words[1])] |= 3<<4; else
+			if(words[0] == 'counterStrike') royalness[parseInt(words[1])] |= 3<<6; else
+			if(words[0] == 'protected') royalness[parseInt(words[1])] |= 3<<8; else
+			if(words[0] == 'antiTrade') { j = parseInt(words[1]); if(n) royalness[n] = 3<<16+2*(j&3); else royalness[j] |= 7<<13; } else
+			if(words[0] == 'extinction') extinction = parseInt(words[1]); else
+			if(words[0] == 'tradeThreshold') thresholdPiece = parseInt(words[1]); else
+			if(words[0] == 'captureMatrix') captMatrix = words[1]; else
+			if(words[0] == 'atomicCapture') atomic = parseInt(words[1]); else
+			if(words[0] == 'mateExemption') exemption = parseInt(words[1]); else
+			if(words[0] == 'conversion') convert = parseInt(words[1]); else
+			if(words[0] == 'value') valueOverride[n] = parseInt(words[1]); else
+			if(words[0] == 'useMarkers') useMarkers = parseInt(words[1]); else
+			if(words[0] == 'castleFlip') castleFlip = parseInt(words[1]); else
+			if(words[0] == 'castleGap') castleGap = parseInt(words[1]); else
+			if(words[0] == 'firstRank') coords = rank1 =	parseInt(words[1]); else
+			if(words[0] == 'fileOffset') file1 = 1 - parseInt(words[1]); else
+			if(words[0] == 'enableAI') ai = parseInt(words[1]); else
+			if(words[0] == 'autoGate') autoGate = parseInt(words[1]); else
+			if(words[0] == 'shuffle') shuffle = words[1]; else
+			if(words[0] == 'moveList') moveList = words[1]; else
+			if(words[0] == 'succession') succession = parseInt(words[1]); else
+			if(words[0] == 'stalemate') stalemate = (words[1] == 'draw' ? 0 : -20000); else
+			if(words[0] == 'nobility') nobility = parseInt(words[1]); else
+			if(words[0] == 'counterbare') counterbare = (words[1] == 'draw' ? 0 : -20000); else
+			if(words[0] == 'baring')
+			{
+				j = parseInt(words[1]);
+				if(j) royalness[j] |= 15;
+				else for(j=1; j<250; j++) if(!royal[j]) royalness[j] |= 15;
+			}
+		}
+		else
+		{
+			var parts = gameDef[i].split(':'), color = 0, j;
+			if(parts.length < 5) continue;//every line that doesn't have 4 ':'s is just ignored
+			if(ranks > initDone)
+			{
+				for(j=initDone; j<ranks; j++)
+				{
+					board[j] = new Array();
+					start[j] = new Array();
+					shadow[j] = new Array();
+					spare[i] = new Array();
+				}
+				ClearBoard();
+				initDone = ranks;
+			}
+			n++;
+			if(!m++) ClearBoard(); // is piece definition
+			names[n] = parts[0];
+			ids[n] = parts[1];
+			moves[n] = parts[2];
+			imag[n]	= parts[3];
+			startSqr[n] = parts[4];
+			hand[n]	= (parts.length > 5 ? parts[5] : '0');
+			if(names[n].length > 0)
+			{ // derive missing stuff from name
+				if(imag[n].length == 0) imag[n] = names[n]; // case still conserved!
+				names[n] = names[n].toLowerCase();
+				if(moves[n].length == 0) moves[n] = DefaultMove(names[n]);
+				if(ids[n].length == 0) ids[n] = (names[n].toUpperCase())[0];
+			}
+			if(imag[n].length == 0) { n--; continue; } // image is mandatory
+			if(graphSuffix != '') imag[n] += '.' + graphSuffix;
+			var nn = n;
+			if(names[n] == 'hole') { nn = 250; n--; } // holes in board
+			var squares = parts[4].split(',');
+			if(parts[4] == 0) continue;
+			for(j=0; j<squares.length; j++)
+			{
+				if(squares[j].length < 2)
+				{
+					color = 1024;
+					continue;
+				}
+				PutPiece(squares[j], nn + color, sym);
+			}
+		}
+	}
+	nType = n;
+	if(!haveRoyal) royal[nType] = 2, royalness[nType] |= 3<<10, royalness[nType]&= ~15; else SetRoyals(haveRoyal);
+	if(nType < 1 || files < 1 || ranks < 1) return 1;
+	handOffs = 1024;
+	for(i=1; i<=nType; i++)
+	{
+		var k, s = hand[i].split(','), swap = (holdingsType < 0 ? handOffs : 0);//why k? It's never used in the function
+		hand[i+swap] = parseInt(s[0]);
+		hand[i+handOffs-swap] = (s.length == 1 ? hand[i+swap] : parseInt(s[1]));
+		loc[i] = loc[i+512] = loc[i+1024] = loc[i+1536] = -1;
+//		if(royal[i]) royalness[i] &= ~15; // erase baring on royals
+	}
+	hSwap = (holdingsType < 0 ? 1024 : 0);
+	if(contageon != '') SetPromoChoice(contageon, 0, 1024);
+	SetPromoChoice(promoChoice, promoChoice == '', 0);//this function-call is making a global-scoped i variable
+	if(weird) ParseMorph(sym);
+	ParseMatrix(captMatrix);
+	if(!weird)
+	{
+		CustomPromotion = window[satellite + "Promotion"]; // look for dedicated promotion routine first
+		weird = (typeof(CustomPromotion) == 'function');
+	}
+	if(!weird && satellite == 'piece' && typeof(WeirdPromotion) == 'function') weird = 1, CustomPromotion = WeirdPromotion;
+	if(!zonal)
+	{
+		CustomZone = window[satellite + 'Zone'];
+		zonal =	typeof(CustomZone) == 'function'; // user-supplied function for indicating no-go area
+	}
+	if(!zonal && satellite == 'piece' && typeof(BadZone) == 'function') zonal = 1, CustomZone = BadZone;
+	if(!xzonal) zonal = 0; // legacy parameter to suppress zoning
+	PartnerDetect();
+	for(i=0; i<=nType; i++) startHand[i] = hand[i], startHand[i+handOffs] = hand[i+handOffs];
+	if(pacoMode) for(i=1; i<7; i++) for(j=1; j<7; j++) ids[64+8*i+j] = ids[i] + ids[j];	 // combis
+	if(screen.colorDepth <= 16) useMarkers = 2, realColor = '#E0E0E0', light = '#FFFFFF'; // assume grey-scale display
+	symmetry = sym;
+	haveShuffle = 0;
+	if(castleFlip < 0) castleFlip = (sym == 'mirror' ? 1 : 0);
+	if(track) NewMakeMove = TrackMakeMove, UnMake = TrackUnMake;
+	else NewMakeMove = OrigMakeMove, UnMake = OrigUnMake;
+
+}
+
+function CreateAnchors(diag, dnr)//diag is the idiagram in the DOM, dnr is its index; only called by Init
+{
+	"use strict";//no changes needed
+	console.log("CreateAnchors",diag,dnr);
+//	const bg = background?`;background-image:url(${background})`:"";
+	let table = document.getElementById(satellite + 'Table');
+	const menu = document.getElementById(satellite + 'Colors');
+//	const aiMessage = `<u onclick="OpenDiv('bar${dnr}'); useAI[${dnr}] = !useAI[${dnr}];" style="color:blue">Play it!</u>`;//changed to use stringtemplating and const
+//	const aiBar = `<div id="bar${dnr}" style="display:none"><p><i style="background:#C0C0FF">The AI will now respond to your moves!</i> (&nbsp;<b onclick="Plies(1);" style="background:#E0E0E0;border:1px solid grey;border-radius:3px"> + </b>&nbsp;<span id="ply${dnr}">2.5 ply</span>&nbsp;<b onclick="Plies(-1);" style="background:#E0E0E0;border:1px solid grey;border-radius:3px"> - </b>&nbsp;)</p><input type="button" onclick="MyRandom(9); NewGame()" value="Restart">\n${buttonBar}<input type="button" onclick="AiMove()" value="Move"><p id="aiGame${dnr}" style="width:400px;border:1px dashed grey" contenteditable="true" onpaste="PasteGame(${dnr})"></p></div>`;//changed to use stringtemplating and const
+//	var pieceInfo = "";//defaults to empty. If no pieceTable and no pieceTable0, this becomes something.
+	if(table == null) table = document.getElementById('pieceTable' + dnr);
+	else table.id = 'pieceTable' + dnr;//if found under another id, id is officially changed to pieceTable0
+/*	if(table == null) // add collapsed piece-info display below the diagram, if not already present elsewhere
+		pieceInfo = `<p>Click <u onclick="if(OpenDiv('legend${dnr}'))OpenDiv('description${dnr}');" style="color:blue">here</u> to open/close a piece overview. ${ai?aiMessage:''}</p>` +
+			aiBar +
+			`<div id="description${dnr}" style="display:none"><table id="piecedesc${dnr}" border="1"><tr><td>Info for selected board piece</td></tr></table>` +
+			(!menu ? '<div id="' + satellite + 'Colors"></div>' : '') +
+			'</div>' +
+			`<div id="printversion${dnr}"></div>`+//all the boards of the print version exist within this div
+			`<div id="legend${dnr}" style="display:none"><table id="pieceTable${dnr}" border="1"></table></div>`;
+	diag.innerHTML = `<p id="message${dnr}"><b style="background:red` +
+			((files + (rank1 >= 0))*sqrSize < 400 ? ';font-size:smaller' : '') +
+			'"><a href="http://www.chessvariants.com/invention/interactive-diagrams">Interactive diagram</a>: pieces movable, right-click resets!</b></p>' +
+			`<table id="board${dnr}" cellpadding="0" style="border-collapse:collapse${bg}"${coords < 0 ? ' border="1"' : ''} oncontextmenu="return false;"></table>` +
+			(pieceInfo != '' ? pieceInfo : ai == 2 ? '&nbsp;&nbsp;&nbsp;&nbsp;<i>This diagram plays chess!</i> ' + aiMessage + aiBar : '');
+*/
+	diag.innerHTML = "";//start from a blank slate
+	diag.appendChild(baseMessageNode());
+	diag.appendChild(baseTableNode());
+	if(table==null)
+	{
+		diag.appendChild(pieceInfoPart1());
+		diag.appendChild(aiBarNode())
+		diag.appendChild(pieceInfoPart2(!menu));
+		diag.appendChild(pieceInfoPart3());
+		diag.appendChild(pieceInfoPart4());
+	}
+	else if(ai==2)
+	{
+		diag.appendChild(document.createTextNode("\u00A0\u00A0\u00A0\u00A0"));
+		const Tdpc = document.createElement('i');
+		Tdpc.appendChild(document.createTextNode("This diagram plays chess!"));
+		diag.appendChild(Tdpc);
+		diag.appendChild(document.createTextNode(" "));
+		diag.appendChild(aiMessageNode());
+		diag.appendChild(aiBarNode());
+
+	}//else nothing more
+
+	diag.style.display = 'inherit'; // description div would normally start invisible
+	//end of commands, below here are only subfunctions
+	function initialMessage()
+	{
+		const b = document.createElement('b');
+		b.style.background = "red";
+		if( (files + (rank1 >= 0))*sqrSize < 400 ){b.style.fontSize = "smaller";}
+		const a = document.createElement('a');
+		a.href = "http://www.chessvariants.com/invention/interactive-diagrams";
+		a.appendChild(document.createTextNode("Interactive diagram"));
+		b.appendChild(a);
+		b.appendChild(document.createTextNode(": pieces movable, right-click resets!"));
+		return b;
+	}
+	function baseTableNode()
+	{
+		const t = document.createElement('table');
+		t.id = `board${dnr}`;
+		t.cellPadding = "0";
+		t.style.borderCollapse = "collapse";
+		if(background){t.style.backgroundImage = `url(${background})`;}
+		if(coords<0){t.border = "1";}
+		t.oncontextmenu = () => {return false;};
+		return t;
+	}
+	function aiMessageNode()
+	{
+		const u = document.createElement('u');
+		u.appendChild(document.createTextNode("Play it!"));
+		u.style.color = "blue";
+		const k = dnr;
+		u.onclick = () => {OpenDiv('bar'+k); useAI[k] = !useAI[k];};
+		return u;
+	}
+	function aiBarNode()
+	{
+		//div - p - i - text - /i - text - b - text - /b - text - span - text - /span - text - b - text - /b - text - /p
+		//input - buttonbar - input - p - /p - /div
+		//"\u00A0" is apparently a non-breaking space
+		const i1 = document.createElement('i');
+		i1.style = "background:#C0C0FF";
+		i1.appendChild(document.createTextNode("The AI will now respond to your moves!"));
+		const b1 = document.createElement('b');
+		b1.onclick = () => {Plies(1);};
+		b1.style = "background:#E0E0E0;border:1px solid grey;border-radius:3px";
+		b1.appendChild(document.createTextNode(" + "));
+		const spn = document.createElement('span');
+		spn.id = `ply${dnr}`;
+		spn.appendChild(document.createTextNode("2.5 ply"));
+		const b2 = document.createElement('b');
+		b2.onclick = () => {Plies(-1);};
+		b2.style = "background:#E0E0E0;border:1px solid grey;border-radius:3px";
+		b2.appendChild(document.createTextNode(" - "));
+		const p1 = document.createElement('p');
+		p1.appendChild(i1);
+		p1.appendChild(document.createTextNode(" (\u00A0"));
+		p1.appendChild(b1);
+		p1.appendChild(document.createTextNode("\u00A0"));
+		p1.appendChild(spn);
+		p1.appendChild(document.createTextNode("\u00A0"));
+		p1.appendChild(b2);
+		p1.appendChild(document.createTextNode("\u00A0)"));
+		const d = document.createElement('div');
+		d.id = `bar${dnr}`;
+		d.style = "display:none";
+		d.appendChild(p1);
+		d.appendChild(document.createTextNode(" "));
+		const ib1 = document.createElement('input');
+		ib1.type = "button";
+		ib1.onclick = () => {MyRandom(9); NewGame()};
+		ib1.value = "Restart";
+		d.appendChild(ib1);
+		d.appendChild(document.createTextNode(" "));
+		const bBf = buttonBarBuilt();
+		for(let i=0;i<bBf.length;i++)
+		{
+			d.appendChild(bBf[i]);
+			d.appendChild(document.createTextNode(" "));
+		}
+		const ib2 = document.createElement('input');
+		ib2.type = "button";
+		ib2.onclick = () => {AiMove()};
+		ib2.value = "Move";
+		d.appendChild(ib2);
+		const p2 = document.createElement('p');
+		p2.id = `aiGame${dnr}`;
+		p2.style = "width:400px;border:1px dashed grey";
+		p2.contentEditable = true;//string or boolean?
+		const PGK = dnr;
+		p2.onpaste = () => {PasteGame(PGK)};
+		d.appendChild(p2);
+		return d;
+	}
+	function baseMessageNode()
+	{
+		const p = document.createElement('p');
+		p.id = `message${dnr}`;
+		p.appendChild(initialMessage());
+		return p;
+	}
+	function pieceInfoPart1()//the part before aiBar
+	{
+		const p = document.createElement('p');
+		p.appendChild(document.createTextNode("Click "));
+		const u = document.createElement('u');
+		//u.onclick = `if(OpenDiv('legend${dnr}'))OpenDiv('description${dnr}');`;
+		const DNRK = dnr;
+		u.onclick = () => {if(OpenDiv('legend'+DNRK))OpenDiv('description'+DNRK);};
+		u.style.color = "blue";
+		u.appendChild(document.createTextNode("here"));
+		p.appendChild(u);
+		p.appendChild(document.createTextNode(" to open/close a piece overview. "));
+		if(ai){p.appendChild(aiMessageNode());}
+		return p;
+	}
+	function pieceInfoPart2(addMenu)//the div after the aiBar, including satellite potentially
+	{
+		const d1 = document.createElement('div');
+		d1.id = `description${dnr}`;
+		d1.style = "display:none";
+		const tbl = document.createElement('table');
+		tbl.id = `piecedesc${dnr}`;
+		tbl.border = "1";
+		const tr1 = document.createElement('tr');
+		const td1 = document.createElement('td');
+		td1.appendChild(document.createTextNode("Info for selected board piece"));
+		tr1.appendChild(td1);
+		tbl.appendChild(tr1);
+		d1.appendChild(tbl);
+		if(addMenu)
+		{
+			const ed = document.createElement('div');
+			ed.id = `${satellite}Colors`;
+			d1.appendChild(ed);
+		}
+		return d1;
+	}
+	function pieceInfoPart3()
+	{
+		const d = document.createElement('div');
+		d.id = `printversion${dnr}`;
+		return d;
+	}
+	function pieceInfoPart4()
+	{
+		const d = document.createElement('div');
+		d.id = `legend${dnr}`;
+		d.style = "display:none";
+		const t = document.createElement('table');
+		t.id = `pieceTable${dnr}`;
+		t.border = "1";
+		d.appendChild(t);
+		return d;
+	}
+	function buttonBarBuilt()
+	{
+		const lbls = ["Flip View","|<","<",">",">>",">|"];
+		const ocls = [
+			() => {FlipView()},
+			() => {Seek(0)},
+			() => {Seek(10001)},
+			() => {Seek(10002)},
+			() => {Seek(10003)},
+			() => {Seek(10000)}
+		];
+		const bB = new Array(6);
+		for(let i=0;i<6;i++)
+		{
+			bB[i] = document.createElement('input');
+			bB[i].type = "button";
+			if(i>0){bB[i].class = "step";}
+			bB[i].value = lbls[i];
+			bB[i].onclick = ocls[i];
+		}
+		return bB;
+	}
+}
+
+function CreateBoard(bnr, err)//only called by Init, once for each idiagram; bnr is its index
+{
+	//"use strict";//complains about (tab),(row),j, h being undefined
+	console.log("CreateBoard",bnr,err);
+	let tab = "";//added let for sake of strict mode
+	const bb = (borders ? 'thin solid black' : 'none');//was var, changed to const
+	const rimStyle = `background:${rimColor};color:${coordColor}`;//changed to use stringtemplating and const
+	const hSiz = (6*sqrSize >> 4) + 7;//moved to its own line, changed to const
+	if(rimColor != '#FFFFFF') tab = `<tr><td colspan="${files + 2}" style="${rimStyle};height:${hSiz}px">&nbsp;</td></tr>`
+	for(i=0; i<ranks; i++)
+	{
+		let row = "";//added let for sake of strict mode
+		if(err)
+		{
+			board[i] = new Array();
+			start[i] = new Array();
+			shadow[i] = new Array();
+			spare[i] = new Array();
+		}
+		if(coords >= 0) row += `<td id="${bnr}r${i}" border="0" style="text-align:right;${rimStyle};width:${hSiz}px">&nbsp;${ranks - i - 1 + rank1}&nbsp;</td>`;//changed to use stringtemplating
+		for(j=0; j<files; j++)//strict mode complains about this j
+		{
+			if(err) board[i][j] = 0;
+			h = ranks - 1 - i;
+			row = row + `<td id="${bnr}y${h}y${j}" style="width:${sqrSize}px;height:${sqrSize}px;border:${bb};font-size:xx-large;background-repeat:no-repeat;background-position: center center" onmousedown="Down(${bnr},${j},${h},event)" onmouseup="Up(${bnr},${j},${h},event)" ontouch="Touch(${bnr},${j},${h})" onmouseover="Hover(event)" ondragover="PreDrop(event)" ondrop="Drop(event)" ondragend="Relay(event)" valign="center" align="center"></td>`;
+		}
+		if(clocks)
+		{
+			if(i == 0) row = row + '<td class="clock" id="topclock" width="' + clocks*sqrSize + '">0:00</td>';
+			if(i == 1) row = row + '<td id="topscore" align="right" width="' + clocks*sqrSize + '"></td>';
+			if(i == ranks-2) row = row + '<td id="bottomscore" align="right" width="' + clocks*sqrSize + '"></td>';
+			if(i == ranks-1) row = row + '<td class="clock" id="bottomclock" width="' + clocks*sqrSize + '">0:00</td>';
+			clockTimes[0] = clockTimes[1] = 600;
+		}
+		if(rimColor != '#FFFFFF') row += '<td style="' + rimStyle + ';width:' + (sqrSize>>1) + 'px"></td>';
+		tab = tab + '<tr>' + row + '</tr>';
+	}
+	if(coords >= 0)
+	{//3 lines changed to use stringtemplating
+		tab += `<tr><td style="${rimStyle}"></td>`;
+		for(j=0; j<files; j++) tab += `<td id="${bnr}f${j}" style="text-align:center;${rimStyle};height:${hSiz}">${Fid(j)}</td>`;
+		if(rimColor != '#FFFFFF') tab += `<td style="${rimStyle}; width:${hSiz}px; height:${hSiz}px">&nbsp;&nbsp;&nbsp;&nbsp;</td>`;
+		tab += '</tr>';
+	}
+	document.getElementById("board" + bnr).innerHTML = tab;//created in CreateAnchors which is called in Init before this function
+}
+
+function BetzaCompile()//defines modes which is also used by BetzaParse and ColorLegend
+{
+	//"use strict";//complains about modes which would be a top-level variable
+	console.log("BetzaCompile");
+	// build dictionary of pieces (also to be used as holdings)
+	var msg = 'style="background:#8080FF;">Click below to display piece moves:';
+	var tab = '<tr><td style="background:#E0E0FF" colspan="'+ (noCounts ? 5 : 7) + '" alignn="center">Click on piece name to see its move diagram.';//typo - alignn
+	if(diagList[active].innerHTML.search('printversion') > 0)
+		tab += ' (<span onclick="ShowAll(' + active + ')" style="color:blue;"><u>print version</u></span>)</td></tr>';
+	tab += '<tr><th>ID</th><th>white</th><th>nr</th><th>black</th><th>nr</th><th>name</th><th id="moval';//pieceHeader used to be used here and nowhere else
+	var tab2 = `<li ${msg}</li>`;
+	if(noCounts)
+	{
+		tab = tab.split('<th>nr</th>');
+		if(tab.length == 3) tab = tab[0] + tab[1] + tab[2];
+	}
+	tab += `${active}" onclick="DisplayMV(${active});">move</th></tr>`;//ph2 and ph3 used to be used here and nowhere else
+	movePtr = 100;
+	oldImag = graphDir + whitePrefix + blackPrefix;
+	modes = 0;
+	flags[first[0]=movePtr++] = 0; // empty square has no moves
+	var w = '', b = '', ww, bb;
+	for(var i=1; i<=nType; i++)
+	{
+		tab += TableRow(i, 0);
+		BetzaParse(i, moves[i]);
+		imitator[i] = (moves[i].split('I').length > 1);
+		var sqrs = startSqr[i];
+		if(sqrs.length)
+		{
+			var s = startSqr[i].split(',,'), ww = s[0], bb = '';
+			if(s.length > 1) bb = s[1], sqrs = ww + (ww != '' && bb != '' ? '; ' : '') + bb;
+			else if(symmetry != 'none')
+			{
+				sqrs = s[0] + '; ';
+				s = s[0].split(',');
+				for(var j=0; j<s.length; j++)
+				{
+					var r = ranks + 2*rank1 - 1 - parseInt(s[j].substring(1));
+					var rg = s[j].split('-');
+					if(rg.length > 1)
+					{
+						if(rg[0].substring(1) == rg[1].substring(1))
+						{ // same rank
+							if(symmetry == 'mirror') bb += rg[0][0] + r + '-' + rg[1][0] + r;
+							if(symmetry == 'rotate') bb += String.fromCharCode(files + 193 - rg[1].charCodeAt(0)) + r + '-' + String.fromCharCode(files + 193 - rg[0].charCodeAt(0)) + r;
+						}
+					}
+					else
+					{
+						if(symmetry == 'mirror') bb += s[j][0] + r;
+						if(symmetry == 'rotate') bb += String.fromCharCode(files + 193 - s[j].charCodeAt(0)) + r;
+					}
+					if(j != s.length - 1) bb += ',';
+				}
+				sqrs += bb;
+			}
+			var nm = names[i].toUpperCase()[0] + names[i].toLowerCase().substring(1);
+			if(ww) w += '; <span onclick="ShowMoves2(' + active + ',' + i + ',-2,0)">' + nm + ': ' + ww + '</span>';
+				//`; <span onclick="ShowMoves2(${active},${i},-2,0)">${nm}: ${ww}</span>`;
+			if(bb) b += '; <span onclick="ShowMoves2(' + active + ',' + i + ',-2,0)">' + nm + ': ' + bb + '</span>';
+				//`; <span onclick="ShowMoves2(${active},${i},-2,0)">${nm}: ${bb}</span>`;
+			sqrs = (sqrs.length < 24 ? ' (' + sqrs + ')' : '');
+		}
+		if(!promoOffset || i <= promoOffset)
+			tab2 += '<li onclick="ShowMoves2(' + active + ',' + i + ',-2,0)">' + (names[i].toUpperCase())[0] + names[i].substring(1) + sqrs + '</li>';
+	}
+	var p = document.getElementById("pieceTable" + active);
+	if(p != null) p.innerHTML = tab;
+	p = document.getElementById(satellite + "List");
+	if(p != null)
+	{
+		if(p.nodeName == 'UL') p.innerHTML = tab2;
+		else p.innerHTML = `<span ${msg}</span></p><p><b>White:</b><br>${w.substring(2)}</p><p><b>Black:</b><br>${b.substring(2)}`;
+	}
+	p = document.getElementById(satellite + "Colors");
+	if(p != null) p.innerHTML = ColorLegend();
+	Descriptions(satellite + 'Descriptions', 0);
+}
+
+function Display()
+{
+	//"use strict";//complains about (x),(y),(cell),piece,(color),(image),(w),(b); piece is used in various other places
+	console.log("Display");
+	var p;
+	let x,y,color,image;//they're no longer global-scoped after this. See about adding it to the for
+	for(i=0; i<ranks; i++) for(j=0; j<files; j++)
+	{
+		if(flip)
+		{
+			x = files - 1 - j;
+			y = ranks - 1 - i;
+		}
+		else
+		{
+			x = j;
+			y = i;
+		}
+		const cell = `${active}y${y}y${x}`;//changed to use stringtemplating and const for the sake of strict mode
+		board[i][j] &= 2048 - 1; // erase markers
+		piece = board[i][j] & ~512;
+		if(piece > 1024)
+		{
+			piece -= 1024;
+			color = blackPrefix;
+		}
+		else
+		{
+			color = whitePrefix;
+		}
+		if(piece > 0 && piece != 250)
+		{
+	//		image = '<img ondragover="Parent(event)" src="' + MakeImage(piece, color) + '" style="vertical-align:top">';
+			image = 'url("' + MakeImage(piece, color) + '")';
+		}
+		else
+		{
+			image = "";
+		}
+		document.getElementById(cell).style.backgroundImage = image;
+	//	document.getElementById(cell).innerHTML = '<img ondragstart="event.target.style.opacity=0.0;" ' + image.replace('url(', 'src=').replace(')', '>');
+		document.getElementById(cell).innerHTML = "";
+		if(piece == 250) Highlight(j, i, holeColor);
+		else if(j == hx1 && i == hy1 || j == hx2 && i == hy2) Highlight(j, i, "#80FF80");
+		else Highlight(j, i, 0);
+	}
+	if(document.getElementById('pieceTable' + active) != null)
+	{
+		if(oldImag != graphDir + whitePrefix + blackPrefix) BetzaCompile(); // switched images, adapt table
+		//p,w,b could be defined here
+		for(i=1; i<=nType; i++)
+		{
+			var swap = (holdingsType < 0 ? handOffs : 0);
+			let w = hand[i+swap]; if(w == 0) w = "-";//added let for sake of strict mode, w is no longer global-scoped
+			let b = hand[i+handOffs-swap]; if(b == 0) b = "-";//added let for sake of strict mode, b is no longer global-scoped
+			p = document.getElementById(active + 'w' + i);
+			if(p != null) p.innerHTML = w;
+			p = document.getElementById(active + 'b' + i);
+			if(p != null) p.innerHTML = b;
+		}
+	}
+	if(realColor != '' && realColor != dark && !touched)
+	{
+		if(light == dark) light = realColor;
+		dark = realColor;
+		touched = -1;
+		oddShade = 0;
+	}
+}
+
+function Debug(s)
+{
+	var p = document.getElementById('debug');
+	if(p) p.innerHTML += s + '<br>';
+}
+
+function OwnShade(x, y)// board checkering//Only called by Highlight
+{
+	"use strict";//no changes needed
+	//console.log("OwnShade");
+	if(shady && typeof(Shade) == 'function') return Shade(x,y);
+	var f = window[satellite + 'Shade'];
+	if(typeof(f) == 'function') return f(x, y);
+	return ((x&1) == (y&1));
+}
+
+var OwnPromotion = function(x1, y1, x2, y2, promo, ep1, ep2)//why is this definition uniquely different? Also, it's never called or mentioned.
+{
+	if(typeof(CustomPromotion) == 'function')
+	{
+		var piece = (x1 < 100 ? board[y1][x1] : 511);
+		CustomPromotion(piece & 1024, piece & 511, x1, y1, x2, y2, promo, board[y2][x2] & 2047, ep1, ep2);
+	}
+}
+
+function DefaultMove(s)// moves of some commonly used pieces//only called by ParseGameDef
+{
+	if(s == 'pawn') return "ifmnDfmWfceF"; // FIDE
+	if(s == 'king') return (files > 8 ? "KisO3" : "KisO2");
+	if(s == 'knight') return "N";
+	if(s == 'bishop') return "B";
+	if(s == 'rook') return "R";
+	if(s == 'queen') return "Q";
+	if(s == 'cardinal') return "BN"; // Capablanca
+	if(s == 'archbishop') return "BN";
+	if(s == 'chancellor') return "RN";
+	if(s == 'marshall') return "RN";
+	if(s == 'amazon') return "QN";
+	if(s == 'lion') return "KNADcaKcabKmabK"; // Chu Shogi
+	if(s == 'mao') return "mafsW"; // Xiangqi
+	if(s == 'horse') return "mafsW";
+	if(s == 'elephant') return "mafF";
+	if(s == 'cannon') return "mRcpR";
+	if(s == 'pao') return "mRcpR";
+	if(s == 'advisor') return "F";
+	if(s == 'lance') return "fR"; // Shogi
+	if(s == 'copper') return "vWfF";
+	if(s == 'silver') return "FfW";
+	if(s == 'silvergeneral') return "FfW";
+	if(s == 'gold') return "WfF";
+	if(s == 'goldgeneral') return "WfF";
+	if(s == 'man') return "K"; // common fairies
+	if(s == 'commoner') return "K";
+	if(s == 'ferz') return "F";
+	if(s == 'camel') return "C";
+	if(s == 'zebra') return "Z";
+	if(s == 'nightrider') return "N0";
+	if(s == 'grasshopper') return "gQ";
+	if(s == 'griffon') return "yafsF";//should be FyafsF if it's from Grande Acedrex
+	if(s == 'gryphon') return "yafsF";//ditto
+	if(s == 'wizard') return "FC"; // Omega
+	if(s == 'champion') return "WAD";
+	if(s == 'falcon') return "nCnZ";
+	return "-";
+}
+
+function ParseMatrix(s)//only called once by ParseGameDef; s is the captureMatrix, which is 0 unless defined in the idiagram source
+{
+	"use strict";//no changes needed, possibly because it returned immediately, look into this.
+	console.log("ParseMatrix",s);
+	if(!s) return;
+	matrix = [];
+	if(typeof(morphs) == 'undefined') morphs = [];
+	typ2 = nType*(nType+1);
+	var w = 0, z = 0;
+	s = s.split('/');
+	for(var i=0; i<s.length; i++)
+	{
+		if(s[i] == '"') s[i] = s[i-1];
+		if(!s[i].length) continue;
+		var last = 0, k = 0;
+		for(var j=0; j<s[i].length; j++)
+		{
+			var m, n = parseInt(s[i].substring(j)), c = s[i][j];
+			if(c == '0') m = 251, w++; // kamikaze capture
+			else if(n > 0)
+			{
+				if(!k) matrix[i] = matrix[i+1+typ2] = 0, k++;
+				for(m=1; m<n; m++) matrix[i+1+nType*k++] = last;
+				if(n > 9) j++;
+				continue;
+			}
+			else if(c == '!') m = -995, z++; // capture ban
+			else if(c == '?') m = -997, z++;
+			else if(c == '^') m = -998, hopsel = 1; // hop ban
+			else if(c == '$') m = -999, z++, hopsel = 1; // capture + hop ban
+			else if(c == '@') m = 512, w++; // burning
+			else if(c == '.') m = 0;
+		//	else if(c == '%') m = -999, k--;
+		//	else if(c == '=') m = -999, k--;
+			else
+			{
+				for(m=nType; m>0; m--) if((m != i || ids[m] != c) && ids[m] == c.toUpperCase()) break;
+				if(!m) continue;
+				if(c == ids[m].toLowerCase()) m |= 1024;
+				w++;
+			}
+			if(!j) matrix[i+1+typ2] = m; // also for 'black empty square'
+			matrix[i+1+nType*k] = last = m;
+			k++;
+		}
+	}
+	if(w) weird |= 4, CustomPromotion = MyMorph;
+	if(z) zonal |= 4, CustomZone = MyBad;
+}
+
+function SetMorph(s, n)//only called by ParseGameDef to handle morph-lines
+{
+	//"use strict";//complains about morphs
+	console.log("SetMorph",s,n);
+	if(!n) return;
+	if(!weird) morphs = [];
+	s = s.split('/');
+	for(var i=0; i<s.length; i++)
+	{
+		if(s[i] == '"') s[i] = s[i-1];
+		if(!s[i].length) continue;
+		while(s[i].length < files) s[i] += s[i];
+		for(var j=0; j < files; j++) morphs[files*(ranks*n + i) + j] = s[i][j];
+	}
+	weird = 1;
+}
+
+function ParseMorph(sym)//only called by ParseGameDef
+{
+	"use strict";//no changes needed
+	console.log("ParseMorph",sym);
+	var w = 0, z = 0;
+	for(var p=1; p<=nType; p++)
+	{
+		if(p <= maxPromote)
+		{
+			for(var i=0; i<promoZone; i++) for(var j=0; j<files; j++) morphs[files*(ranks*p + i) + j] = '*';
+		}
+		for(var i=0; i<files*ranks; i++)
+		{
+			var k, n = p*files*ranks + i, c = morphs[n];
+			if(c)
+			{
+				if(c == '*') k = 1000;
+				else if(c == '!') k = -1000;
+				else if(c == '+') k = -1002;
+				else if(c == '#') k = -1003;
+				else
+					for(k=nType; k>0; k--) if(k != p && ids[k] == c) break;
+				morphs[n] = k;
+				if(k < 0) z++;
+				if(k > 0) w++;
+			}
+		}
+	}
+	weird = 0;
+	if(z) zonal = (sym == 'rotate' ? 2 : 1), CustomZone = MyBad;
+	if(w) weird = (sym == 'rotate' ? 2 : 1), CustomPromotion = MyMorph;
+}
+
+function MyMorph(ff, fr, tf, tr, promo)
+{
+	if(fr >= 100) return promo;
+	var piece = board[fr][ff], t = piece & 511, c = piece & 1024;
+	if(weird & 4)
+	{
+		var victim = board[tr][tf], v = victim & 511, n = nType*v + t;
+		if(!(victim - c & 1024)) n += typ2;
+		n = matrix[n];
+		if(n == 251 || n & 0x300) return n;
+		if(n > 0) return c ^ n;
+	}
+	if(!c) tr = ranks - 1 - tr;
+	else if(weird & 2) tf = files - 1 - tf;
+	var p = morphs[files*(ranks*t + tr) + tf];
+	if(p > 0)
+	{
+		if(p == 1000)
+		{
+			if(promo == 1021) return 1000;
+			if(promo > 10000) return 1020;
+			var q = morphs[files*(ranks*(promo & 511) + tr) + tf];
+			if(q > 0 && q < 1000 && ids[q] == ids[promo&511]) return 1022;
+			return promo & 511 | c;
+		}
+		return c | p;
+	}
+	return promo;
+}
+
+function MyBad(x, y, piece, color)
+{
+	if(!piece) return 0; // not paralyzed
+	if(zonal & 4)
+	{
+		var victim = board[y][x], v = victim & 511, c = nType*v + piece;
+		if(!(victim - color & 1024)) c += typ2;
+		c = matrix[c];
+		if(c < 0)
+		{
+			if(c & 1) return 1; // capture ban
+		}
+	}
+	if(!color) y = ranks - 1 - y;
+	else if(zonal == 2) x = files - 1 - x;
+	var p = morphs[files*(ranks*piece + y) + x];
+	return (p >= 0 ? 0 : p + 1001);
+}
+
+function PutOne(f, r, piece)//only called by PutInner
+{
+	if((piece & 511) == 250) shadow[r][f] = piece = 250; // holes
+	board[r][f] = piece;
+}
+
+function PutInner(f, r, piece, sym)//called by PutPiece and ShuffleOne
+{
+	"use strict";//no changes needed
+	console.log("PutInner",f,r,piece,sym);
+	var color = piece & 1024;
+	PutOne(f, r, piece);
+	if(color == 0)
+	{ // add black partner of white piece
+		if(sym == 'rotate') PutOne(files-1-f, ranks-1-r, piece|1024);
+		if(sym == 'mirror') PutOne(f, ranks-1-r, piece|1024);
+	}
+}
+
+function PutPiece(sqr, piece, sym)
+{
+	"use strict";//no changes needed
+	console.log("PutPiece",sqr,piece,sym);
+	var a = "a".charCodeAt(0) + file1 - 1;
+	var f = sqr.charCodeAt(0) - a;
+	var r = parseInt(sqr.substring(1,3)) - rank1;
+	var bounds = sqr.split('-');
+	if(f >= files) f -= 23;
+	if(bounds.length < 2) { PutInner(f, r, piece, sym); return; } // just one
+	var e = bounds[1].charCodeAt(0) - a;
+	if(e >= files) e -= 23;
+	var s = parseInt(bounds[1].substring(1,3)) - rank1;
+	for(var i=r; i<=s; i++)	for(var k=f; k<=e; k++) PutInner(k, i, piece, sym);
+}
+
+function SetPromoChoice(pc, def, offs)
+{
+	//"use strict";//complains about i,k; makes i global but is not the only one
+	console.log("SetPromoChoice",pc,def,offs);
+	var s = pc;
+	var t = (s.search(',') > 0);
+	s = ',' + s + ',';
+	for(i=1; i<=nType; i++)
+	{
+		k = s.split(ids[i]);
+		if(k.length > 1)
+		{
+			var l = k[0].length, c = k[0][l-1];
+			c = (c == '!' ? 2 : c == '*' ? 3 : c == ',' ? 1 : 4);
+			if(c == 4)
+			{
+				if(t) continue;
+				c = 1;
+			}
+			var n = parseInt(k[1]);
+			if(n > 0 || k[1][0] == ',' || !t) choice[i+offs] = c;
+			promoDepth[i+offs] = (n ? n : promoZone);
+		} else choice[i+offs] = def;
+	}
+}
+
+function SetRoyals(s)//only called by ParseGameDef and only if 'royal' line present
+{
+	"use strict";//no issues spotted(not called yet)
+	console.log("SetRoyals",s);
+	var a = s.split(',');
+	for(var i=1; i<a.length; i++)
+	{
+		var j = parseInt(a[i]);
+		if(j > 0) royal[j] = 2, royalness[j] |= 3<<10;
+	}
+	s += ','
+	for(i=1; i<=nType; i++) if(s.split(',' + ids[i] + ',').length > 1) royal[i] = 2, royalness[i] |= 3<<10;
+}
+
+function PartnerDetect()//only called by ParseGameDef
+{ // find castling partners
+	//"use strict";//complains about hSide, fischer, castleRank, aSide
+	console.log("PartnerDetect");
+	castleRank = fischer = hSide = -1;
+	for(var i=0; i<ranks; i++) for(var j=0; j<files; j++) {
+		var pc = start[i][j] = board[i][j];
+		loc[pc+512] = loc[pc], loc[pc] = 128*i + j;
+		if(pc && (pc & 511) != 250 && moves[pc&511].split('O').length > 1) castleRank = i, aSide = hSide = j;
+	}
+	if(castleRank >= 0)
+	{ // figure out castling partners (assume same for black)
+		if(shuffle.split(ids[board[castleRank][aSide] & 511]).length > 1) fischer = aSide;
+		while(aSide >= 0 && board[castleRank][aSide] != 250) aSide--;
+		while(board[castleRank][++aSide] == 0);
+		while(hSide < files && board[castleRank][hSide] != 250) hSide++;
+		while(board[castleRank][--hSide] == 0);
+		if(castleRank >= ranks/2) castleRank = ranks - 1 - castleRank;
+	}
+}
+
+function MyRandom(n)
+{
+	mySeed = mySeed * 16807 % 2147483647;
+	return Math.floor(((mySeed - 1)/2147483646)*n);
+//	return Math.floor(Math.random()*n);
+}
+
+function ShuffleOne(color, shuffle)//only called by Shuffle
+{
+	if(shuffle == '') return;
+	var counts = new Array(), square = new Array(), shades = new Array();
+	var king = 0, rook = 0, sq = 0, a, h;
+	for(r=1; r<=nType; r++)
+	{
+		if(royal[r] && moves[r].split('O').length > 1) king = r; // find piece that castles
+		counts[r] = 0;
+	}
+	for(var r=0; r<ranks; r++) for(var f=0; f<files; f++)
+	{
+		var piece = board[r][f];
+		if(piece && (piece & 1024) == color)
+		{
+			piece &= 511;
+			var p = shuffle.split(ids[piece]);
+			if(p.length != 2) continue; // not in shuffle
+			var s = 2048*r + f;
+			square[sq++] = s; // remember squares
+			shades[piece] = 2049*s & 2048; // and shade
+			counts[piece]++; // count pieces
+			if(piece == king) rook = board[r][0] & 511;
+			if(rook != (board[r][files-1] & 511)) rook = 0;
+		}
+	}
+	for(r=1; r<=nType; r++)
+	{ // pass 1: color-bound singlets
+		var k = shuffle.split(ids[r]);
+		if(k.length != 2 || counts[r] != 1) continue; // not a singlet to shuffle
+		var c = k[0][k[0].length-1]; // prefix
+		if(c != '!') continue; // not a singlet to color-keep
+		var shade = shades[r], n = sq;
+		while(counts[r] && n)
+		{
+			var i = MyRandom(n);
+			var s = square[i];
+			square[i] = square[--n];
+			square[n] = s;
+			if(shade != (2049*s & 2048)) continue; // wrong color: reject
+			square[n] = square[--sq];
+			counts[r]--;
+			n = sq;
+			PutInner(s&2047, s>>11, r + color, symmetry);
+		}
+	}
+	for(r=1; r<=nType; r++)
+	{ // pass 2: other color bounds
+		var k = shuffle.split(ids[r]);
+		if(k.length != 2 || counts[r] < 2) continue; // not a pair to shuffle
+		var c = k[0][k[0].length-1]; // prefix
+		if(c != '!' && c != ':') continue; // not a pair of color-balanced
+		var shade = -1, last, n = sq;
+		while(counts[r] && n)
+		{
+			var i = MyRandom(n);
+			var s = square[i];
+			square[i] = square[--n];
+			square[n] = s;
+			if(c == ':')
+			{
+				if(counts[r] & 1 && (last + s & 2047) != files-1) continue; // not symmetric, reject
+			}
+			else if(shade == (2049*s & 2048)) continue; // same color as previous: reject
+			square[n] = square[--sq];
+			counts[r]--;
+			n = sq;
+			PutInner(s&2047, s>>11, r + color, symmetry);
+			shade = 2049*s & 2048;
+			last = s;
+		}
+	}
+	for(r=1; r<=nType; r++)
+	{ // pass 3: all non-castling
+		while((r != king || !rook || counts[rook] < 2) && counts[r] > (r == rook ? 2 : 0))
+		{ // pass 2: place non-castling
+			var i = MyRandom(sq);
+			var s = square[i];
+			square[i] = square[--sq];
+			counts[r]--;
+			PutInner(s&2047, s>>11, r + color, symmetry);
+		}
+	}
+//statuss.innerHTML += 'Shuffle; left='+sq+' squares K='+king+' R='+rook+'<br>';
+	if(king > 0 && rook > 0 && counts[rook] == 2 && counts[king] == 1)
+	{
+		k = (square[1] > square[0] ? 1 : 0);
+		a = 1 - k;
+		h = 2;
+		if(square[k] > square[2])
+		{
+			h = k;
+			k = (square[1-k] > square[2] ? 1-k : 2);
+			a = 3 - h - k;
+		}
+		for(f=0; f<3; f++) PutInner(square[f]&2047, square[f]>>11, (f == k ? king : rook) + color, symmetry);
+		aSide = square[a] & 2047;
+		hSide = square[h] & 2047;
+	}
+}
+
+function Shuffle(same)//called by NewGame and Seek, once each
+{
+	"use strict";//no changes needed
+	console.log("Shuffle",same);
+	if(mySeed == 123456789) return;
+	if(same)
+	{
+		if(haveShuffle)
+			for(var r=0; r<ranks; r++) for(var f=0; f<files; f++) board[r][f] = lastShuffle[r][f];
+		return;
+	}
+	lastShuffle[-1] = mySeed;
+	var parts = shuffle.split(',');
+	for(var i=0; i<parts.length; i++)
+	{
+		ShuffleOne(0, parts[i]);
+		if(symmetry == 'none') ShuffleOne(1024, parts[i]);
+	}
+	haveShuffle = 1;
+	for(var r=0; r<ranks; r++)
+	{
+		lastShuffle[r] = new Array();
+		for(var f=0; f<files; f++) lastShuffle[r][f] = board[r][f];
+	}
+}
+
+function Centralize(p)//only called by Seek
+{
+	"use strict";//no issues spotted(not called yet)
+	console.log("Centralize",p);
+	placement = p;
+	var j = p[4];
+	var r = ranks-1 >> 1;
+	if(board[0][6] == 0) return;
+	for(var i=p[0]; i<=p[1]; i++) board[r][j] = board[0][i], board[r+1][j++] = board[ranks-1][i], board[ranks-1][i] = board[0][i] = 0;
+	for(var i=p[2]; i<=p[3]; i++) board[r][j] = board[1][i], board[r+1][j++] = board[ranks-2][i], board[ranks-2][i] = board[1][i] = 0;
+	Display();
+}
+
+function Legend(color, betza, text)//only called by ColorLegend
+{
+	"use strict";//no changes needed
+	var img = (color == "00FFFF" ? ' style="background-color:#C0C0FF"' : '') + '><img src="' + markerDir + 'mark' + color + '.png" height="21" width="21">';
+	if(!useMarkers) img = ` height="21" width="21" style="background-color:#${color}">`;
+	return `<tr><td${img}</td><td><b>${betza}</b></td><td>${text}</td></tr>`;//changed to use stringtemplating
+}
+
+function ColorLegend()//only called by BetzaCompile
+{
+	"use strict";//no changes needed
+	console.log("ColorLegend");
+	return '<br><table cellpadding="0" border="1" style="border-collapse: collapse">' + 
+		Legend('FFFF00', 'mc', 'Move or capture') +
+		Legend('FFC000', 'mc', 'Move or capture (unblockable jump)') +
+		(modes & 1 ? Legend('C0C000', 'imc', 'Move or capture (unmoved piece only)') : '') +
+		Legend('00FF00', 'm', 'Move only') +
+		Legend('00C000', 'im', 'Move only (unmoved piece only)') +
+		Legend('FF0000', 'c', 'Capture only') +
+		(modes & 2 ? Legend('0000FF', 'd', 'Capture own piece') : '') +
+		(modes & 4 ? Legend('00FFFF', 'ca', 'Locust capture (hover/touch for sequel)') : '') +
+		(modes & 8 ? Legend('00A000', 'O', 'Castling destination of King') : '') +
+		Legend('A0A0A0', 'm,c', 'Forbidden move, but delivers check') +
+		(modes & 16 ? '<tr><td style="text-align:center;background-color:#' + (useMarkers ? 'C0C0C0' : 'FFFFFF') + '" height="21">' +
+		(useMarkers? '' : '<b>?</b>') +
+		'</td><td><b>p,g</b></td><td>Hop target (hover/touch for actual move)</td></tr>' : '') +
+		'<td colspan="3" onclick="useMarkers = 1 - useMarkers;BetzaCompile();">&nbsp;Click on piece to toggle its moved status</td></tr>' +
+		'</table>';								
+}
+
+function ClearBoard()//only called by ParseGameDef
+{
+	for(var i=0; i<ranks; i++) for(var j=0; j<files; j++) board[i][j] = shadow[i][j] = 0;
+}
+
+function ShowMessage(msg, color)
+{
+	if(color != undefined) msg = '<span style="background:' + color + '">' + msg + '</span>';
+	document.getElementById('message' + active).innerHTML = msg;
+}
+
+function FlipView()//only called by clicking the button in the buttonBar
+{//this crashes on first for-loop as getElementById returns null unless idiagram has firstRank=1
+	"use strict";//no changes needed
+	console.log("FlipView");
+	flip = !flip;
+	Display();
+	if(clocks) DisplayClock(0), DisplayClock(1), DisplayScore(displayed), DisplayScore(displayed-1);
+	for(i=0; i<files; i++)
+	{
+		document.getElementById(active + 'f' + i).innerHTML = Fid(flip ? files - i - 1 : i);
+	}
+	for(i=0; i<ranks; i++) document.getElementById(active + 'r' + i).innerHTML = '&nbsp;' + (flip ? rank1 + i : ranks - i + rank1 - 1) + '&nbsp;';
+}
+
+function Highlight(x, y, color)
+{
+	"use strict";//no changes needed
+	//console.log("Highlight");
+	var old = 0, markers = useMarkers && x < 100, ocol = color;
+	if(x >= files && x != 100) return;
+	if(x < 100 && (board[y][x]&511) == 250) color = holeColor;
+	if(checkFlag || color && zonal && !newcl && x < 100 && board[y][x] != 250 && CustomZone(x, y, piece & 512-1, piece & 1024, xx, yy, ex, ey) > 0) return;
+	if(san) { if(x == sanX && y == sanY) san |= 1; return; }
+	if(pacify && color == '#FF0000') return;
+	if(x < 100 && color != 0) old = board[y][x] & (1<<30), board[y][x] |= (1<<30);
+	if(color == 0)
+	{
+		if(x < 100)
+		{
+			var os = OwnShade(x, y);
+			if(typeof(os) == 'string' && os[0] == '#') color = os; else
+			color = (os ? (oddShade && x & 1 ? oddShade : dark) : light);
+			if(shadow[y][x] == 250) color = "#D0C0B8";
+		}
+		else color = "#FFFFFF";
+		markers = 0;
+	}
+	else if(color == "#80FF80" || color == holeColor || color == "#FF8080" || color == "#C0C0C0") markers = 0; // move highlights & holes
+	else if(x < 100 && blockFlag && !royal[board[y][x] & 512-1]) color = "#A0A0A0";
+	if(flip && x < 100)
+	{
+		x = files - 1 - x;
+		y = ranks - 1 - y;
+	}
+	if(color == '#') color = '';
+	var suppress = (touched && old && color == "#00FFFF"), p = document.getElementById(active + 'y' + y + 'y' + x);
+	if(!p) return;
+	if((color == "#C0C0C0" || color == "#00FFFF" && touched) && !useMarkers)
+		p.innerHTML = `<span style="font-size:${3*sqrSize>>2}px">?</span>`;
+	else if(markers && !suppress)
+		p.innerHTML = `<img style="display:block" onmouseover="Parent(event)" ontouch="Parent(event)" src="${markerDir}mark${color.substring(1)}.png">`;
+	if(markers ? touched && color == "#00FFFF" && (color = "#C0C0FF") : !suppress)
+		p.style.backgroundColor = color;
+}
+
+function Lowlight()
+{
+	if(hx1 >= 0) Highlight(hx1, hy1, 0);
+	if(hx2 >= 0) Highlight(hx2, hy2, 0);
+	hx1 = -1;
+	hx2 = -1;
+}
+
+function Promoted(n)
+{
+	n = n & 511;
+	if(n > maxPromote) return n;
+	n += promoOffset;
+	if(n > nType) n = promoOffset + 1;
+	return n;
+}
+
+function Promotion(x, y, f, r)
+{
+	if(positionSetup) return 0; // no promotions in setup mode
+	if(weird)
+	{
+		var np = CustomPromotion(x, y, f, r, 1021, ex, ey);
+		if(np == 1001) return 0;						// suppress choice
+		if(np == 1000 || np < 0) return 1;	// force choice
+	}
+	var p = board[y][x] & (2048 - 1 - 512);
+	if((p & 511) > maxPromote) return 0; // not promotable
+	var v = board[r][f] & 2047;
+	if(p < 1024) { r = ranks - 1 - r; y = ranks - 1 - y; } else p -= 1024;
+	if((p & 511) == 1 && (r == 0 && promoZone > 0)) return 2; // Pawn must promote on last rank
+	if(y < promoZone && holdingsType == 0) return (v != 0 || !promoOffset);	// was already in; only on capture
+	return (r < promoZone || y < promoZone);
+}
+
+function Hold(piece, hType, s)
+{
+	piece &= 2048 - 1 - 512;
+	if(piece == 0 || hType == 0) return;
+	if(hType == -1 && promoOffset && (piece & 511) > promoOffset) piece -= promoOffset; // demote
+	if(piece > 1024) piece += handOffs - 1024;
+	hand[piece] += s;
+}
+
+function MakeMove(x1, y1, x2, y2, epx, epy, promo)
+{
+//document.getElementById('debug').innerHTML = '('+x1+','+y1+','+x2+','+y2+','+epx+','+epy+')' + board[y2][x2];
+	flagX = -1;
+	flagY = -1; // clear old e.p. rights
+	victim = board[y2][x2];
+	if(x1 < 100)
+	{
+		piece = board[y1][x1];
+		if(sequel2) piece = sequel2, sequel2 = 0; else
+		board[y1][x1] = shadow[y1][x1]; if((piece ^ victim) & 1024) Hold(victim, holdingsType, 1);
+	}
+	else
+	{
+		piece = y1;
+		if(piece > nType) piece += 1024 - handOffs;
+		hand[y1 ^ hSwap]--;
+		Hold(victim, ((victim ^ piece) & 1024) == 0 ? 1 : holdingsType, 1); // always allow swapping of own pieces
+		if(positionSetup > 1)
+		{
+			if(positionSetup > 2) board[ranks-1-y2][files-1-x2] = piece ^ 1024;
+			if(positionSetup & 2) board[ranks-1-y2][x2] = piece ^ 1024;
+			if(positionSetup == 3) board[y2][files-1-x2] = piece;
+		}
+	}
+	movedPiece = piece;
+	movedX = x2;
+	movedY = y2; // remember for AI 'move' button
+	captPiece = board[y2][x2];
+	if(!imitator[piece&511]) imi = imitatedType = piece & 511; // avoid recursive imitation
+	if(epx >= 0)
+	{ // side effect
+		if(epx == 100)
+		{ // specifies creation of rights
+			flagX = x1; flagY = y1; lastX = x2; lastY = y2; // set e.p. rights
+		}
+		else if(epx > 100)
+		{ // double-locust kludge
+			Hold(board[epy][epx-101], holdingsType, 1);
+			Hold(board[2*epy-y1][2*epx-x1-202], holdingsType, 1);
+			board[epy][epx-101] = shadow[epy][epx-101];
+			board[2*epy-y1][2*epx-x1-202] = shadow[2*epy-y1][2*epx-x1-202];
+		}
+		else
+		{
+			victim = board[epy][epx];
+			board[epy][epx] = shadow[epy][epx];
+			if((victim & 2047) == 0)
+			{
+				if(board[y2][x2] & 511) board[epy][epx] = board[y2][x2]; // unload regular victim on empty e.p. square
+				else flagX = 100 + x1, flagY = y1;
+			}
+			else if(((victim ^ piece) & 1024) == 0 && (victim & 511) <= nType && moves[piece&511].split('O').length > 1)
+			{ // locust capture of own piece
+				if(moves[piece&511].split('pO').length > 1) board[y1][x1] = victim | 512; else {
+					var xh, xs =(castleGap > 0 ? x2 : x1);
+					xh = (x1 > epx ? xs + castleGap : xs - castleGap), board[y2][xh] = victim | (victim & 511 ? 512 : 0);
+				}
+			} else Hold(victim, holdingsType, 1); // locust capture
+		}
+	}
+	if(promo != 1023 && promo & 256)
+	{
+		var pp = promo - 256;
+		board[epy][epx] = pp;
+		pp &= 255;
+		if(piece & 1024) pp += handOffs; hand[pp]--;
+	}
+	else
+	{
+		var ppiece = piece + promoOffset;
+		if((ppiece & 511) > nType) ppiece = promoOffset + 1 + (piece & 1024);
+		if(promo != 0)
+		{
+			piece &= 1535;
+	//		hand[piece & 1024 ? piece - 1024 + handOffs : piece]++;
+			ppiece = (promo == 1023 ? ppiece : promo == 1020 ? 0 : promo & ~1024 | piece & 1024);
+			if(promo == 251) ppiece = 0; // kamikaze
+			if(ppiece != piece && choice[ppiece&511] == 3) hand[ppiece & 1024 ? ppiece - 1024 + handOffs : ppiece]--;
+			piece = ppiece;
+		}
+	}
+	board[y2][x2] = piece | (piece & 511 ? 512 : 0);
+	if((piece & 512) == 0 && (piece & 511) == convert) shades |= 1 << (x2+y2 & 1) + (piece & 1024 ? 2 : 0);
+	if(succession && (captPiece & 511) == succession && !((captPiece ^ movedPiece) & 1024) && royal[movedPiece & 511]) board[y1][x1] = captPiece;
+	if(autoGate && (y1 == 1 || y1 == ranks-2) && !(piece & 512)) {
+		var g = (y1 == 1 ? 0 : ranks-1);
+		if((board[g][x1] & 511) != 250) board[y1][x1] = board[g][x1], board[g][x1] = 250;
+		if(epx >= 0 && (board[g][epx] & 511) != 250) board[y1][epx] = board[g][epx], board[g][epx] = 250;
+	}
+	CountRoyals();
+}
+
+function Move(x1, y1, x2, y2, epx, epy, oldPromo)
+{
+	//"use strict";//undeclared variable promo
+	console.log("Move");
+	if(choice[(board[y2][x2] & 511) + 1024] == 1 && choice[(board[y1][x1] & 511) + 1024] != 2) promo = board[y2][x2] & 511;
+	else if(weird)
+		promo = CustomPromotion(x1, y1, x2, y2, oldPromo, epx, epy); // for variants with custom promotion
+	else promo = oldPromo;
+	if(oldPromo == 1022 && (promo & 2048) == 0) return 1; // merge request rejected if not accepted through bit 11
+	if(promo == 1022) return 1; // rejection code for custom move vetting in WeirdPromotion
+	promo &= 2047;
+	sanMoves[displayed] = ToSAN(x1, y1, x2, y2, epx, epy, promo);
+	var ptr = document.getElementById('sanmove');
+	if(ptr != null) ptr.innerHTML = sanMoves[displayed];
+	AddMove(x1, y1, x2, y2, epx, epy, promo);
+	MakeMove(x1, y1, x2, y2, epx, epy, promo);
+	hx1 = x1; hy1 = y1; hx2 = x2; hy2 = y2; // highlights
+	Display();
+	if(epx >= 0 && epx < 100) Highlight(epx, epy, "#FF8080");
+	if(epx > 100) Highlight(epx-101, epy, "#FF8080"), Highlight(2*epx-x1-202, 2*epy-y1, "#FF8080");
+	ptr = document.getElementById('game');
+	if(!ptr) ptr = document.getElementById('aiGame' + active);
+	if(ptr != null) ptr.innerHTML = FlushSAN();
+	return 0;
+}
+
+function Interpose(s)
+{
+	if(touched <= 0) return;
+	var t = touched;
+	if(s.length < 5) return;
+	var a = s.split('y');
+	if(a.length != 3) return;
+	if(active != a[0] || a[1] == ranks-1>>1 && a[2] == files>>1) return;
+	if(board[a[1]][a[2]] & (1<<28))
+	{
+		touched = -1; obstacle = 1;
+		ShowMoves2(active, t, a[2], a[1]);
+	}
+	else if(obstacle)
+	{
+		touched = -1; obstacle = 0;
+		ShowMoves2(active, t, -1, 0);
+	}
+}
+
+function Hover(ev)
+{
+	emulateHover = 0;
+	Interpose(ev.target.id);
+}
+
+function Relay(ev)// catches mouse-up after drag in source. (destination might be eclipsed)
+{
+	var coords = curCell.split('y');
+	if(coords.length != 3) return;
+	Up(parseInt(coords[0]), parseInt(coords[2]), parseInt(coords[1]), ev);
+}
+
+function PreDrop(ev)// keeps track of cell we are in
+{
+	ev.preventDefault();
+	s = ev.target.id;
+	if(s.length > 2) curCell = s;
+}
+
+function Parent(ev)// keeps track of cell we are in, when image hides cell
+{
+	s = ev.target.parentElement.id;
+	if(s.length > 2) curCell = s, Interpose(s);
+}
+
+function Drop(ev)// needed to prevent browser follows link to dragged image
+{
+	ev.preventDefault();
+}
+
+function ShogiProm(yes)
+{
+	var prom = (board[yy][xx] & 1535) + yes*promoOffset;
+	if((prom & 511) > nType) prom = promoOffset + 1 + (prom & 1024);
+	ShowMessage("Next move:");
+	Move(xx, yy, px, py, ex, ey, prom);
+	Display();
+	xx = -1;
+	px = -1;
+	ex = -1;
+	if(useAI[active]) ShowMessage("Thinking"), setTimeout('AiMove()', 100);
+}
+
+function PromoCount(x, y, m, h)
+{
+	var py = 0, type = 1;
+	for(var i=1; i<=nType; i++)
+	{
+		var px = choice[i];
+		if(px > 0)
+		{
+			if(promoDepth[i] <= (m ? y : ranks - 1 - y)) px = 0;
+			if(weird)
+			{
+				var cp = CustomPromotion(xx, yy, x, y, i);
+				if(cp == 1022) px = 0;
+				else if((cp & 511) == i) px = choice[i];
+				if(promoDepth[i] != promoZone && promoDepth[i] <= (m ? y : ranks - 1 - y)) px = 0;
+			}
+			if(px == 2 && (y == autoGate || y == ranks - 1 - autoGate)) px = 0;
+			if(px == 3 && hand[i + m] <= 0) px = 0;
+		}
+		if(px > 0)
+		{
+			type = i;
+			py++;
+			if(h) Highlight(100, i + m, "#8080FF");
+		}
+	}
+	if(weird && CustomPromotion(xx, yy, x, y, 251) == 251) py++;
+	return (py < 2 ? type : 1000);
+}
+
+function PromoQuery(xx, yy, x, y)// conduct promotion dialog if needed
+{
+	var promoType = 0; // assume no promotion
+	if(xx < 100 && Promotion(xx, yy, x, y))
+	{
+		var pp = board[yy][xx];
+		m = (pp & 1024 ? handOffs : 0);
+		if(promoOffset)
+		{
+			px = x;
+			py = y;
+			if(choice[pp&511] == 2) ShogiProm(1);
+			else
+			{
+				ShowMessage('<b>Promote? click here:</b> ' +
+					'<span onclick="ShogiProm(1)" style="color:blue"><u>yes, please?</u></span> / ' +
+					'<span onclick="ShogiProm(0)" style="color:blue"><u>no, thank you!</u></span>'); 
+			}
+			return -1; // request parent to return
+		}
+		promoType = PromoCount(x, y, m, 0);
+		if(promoType == 1000)
+		{ // kludge to signal multiple choices
+			var legend = document.getElementById('legend' + active);
+			if(legend) legend.style.display = 'inherit';
+			if((legend == null || legend.style.display != 'none') && document.getElementById('pieceTable' + active) != null) { // can choose from table
+				ShowMessage('<b>Click on icon of piece of choice</b>', 'red');
+				PromoCount(x, y, m, 1); //highlights table
+				px = x;
+				py = y;
+				return -1;
+			}
+			else
+			{
+				promoType = nType-1;
+				if(promoChoice.length > 0 && promoChoice[0] != '*')
+				{
+					for(var i=nType; i>1; i--) if(ids[i] ==	promoChoice[0]) break;
+					if(i > 1) promoType = i;
+				}
+			}
+		}
+	}
+	return promoType;
+}
+
+function SwitchDiag(n)
+{
+	if(n == active) return;
+	ParseGameDef(n);
+	if(realColor != '' && realColor != dark)
+	{
+		if(light == dark) light = realColor;
+		dark = realColor;
+		oddShade = 0;
+	}
+	BetzaCompile();
+	xx = -1;
+	ex = -1;
+	px = -1;
+	Display();
+}
+
+function Click(x, y)
+{
+	//"use strict";//complains about preClick
+	console.log("Click",x,y);
+	var promoType = 0, moved = 0, handler = newcl;
+	if(touched > 0 && x == files >> 1 && y == ranks-1 >> 1)
+	{
+		ShowMoves2(active, touched ^ 512, -1, 0);
+		return;
+	}
+	if(emulateHover) return;
+	if(touched)
+	{
+		if(touched < 0) Display(), touched = 0;
+		else
+		{
+			ShowMoves2(active, 0, -1, 0);
+			return;
+		}
+	}
+	if(displayed != gameLen)
+	{
+		if(useAI[active]) gameLen = displayed;
+		else
+		{
+			ShowMessage('Position not current; press ">|" first', 'red');
+			return;
+		}
+	}
+	if(x < 100)
+	{
+		if(px >= 0)
+		{ // board click instead of promo choice: abort promotion move
+			for(i=1; i<=2*nType; i++) Highlight(100, i, 0);
+			Lowlight();
+			Display();
+			ShowMessage('Next move:');
+			xx = -1;
+			px = -1;
+			ex = -1;
+		}
+		if(flip)
+		{
+			x = files - 1 - x;
+			y = ranks - 1 - y;
+		}
+		piece = board[y][x];
+		if(positionSetup && xx < 0 && !piece && hx1 == 100)
+		{
+			xx = hx1;
+			yy = hy1;
+		} // multiple to-clicks
+	}
+	else
+	{
+		piece = (y > nType ? y - handOffs : y);
+		if(px >= 0)
+		{ // this is the promotion choice we are waiting for
+			if(newcl) return MoveAndDisplay(promoMove, y, 1);
+			if(promoChoice.length) {
+				y = piece + (board[yy][xx] & 1024 ? handOffs : 0); // fake click on own color
+				i = choice[piece];
+				var promoDist = (y <= nType ? ranks - 1 - py : py);
+				if(weird) {
+					var cp = CustomPromotion(xx, yy, px, py, 10000+piece);
+					if(cp == 1020) promoDist = 0;
+				}
+				if(i <= 0) return; // invalid choice; ignore
+				if(i == 2 && !promoDist) return; // choice not allowed on last rank
+				if(promoDepth[piece] <= promoDist) return;
+				if(i == 3) { // must take from holdings
+					if(!hand[y]) return; // but not there
+				}
+			} else if(piece == 1 || royal[piece]) return; // by default no Pawn or King
+			if(y > nType) y += 1024 - handOffs;
+			for(i=1; i<=nType; i++) Highlight(100, i, 0), Highlight(100, i + handOffs, 0);
+			Move(xx, yy, px, py, ex, ey, y);
+			Display();
+	//		ShowMessage("Next move:");
+			if(useAI[active]) ShowMessage("Thinking"), setTimeout('AiMove()', 100);
+			xx = -1;
+			px = -1;
+			ex = -1;
+			return;
+		}
+		if(hand[y ^ hSwap] == 0) return;
+		if(xx >= 0) xx = -1;
+		handler = 0; // do not use NewClick for drops
+	}
+	if(handler && xx < 100) return NewClick(x, y);
+	var same = (xx == x && yy == y), terminate = 0;
+	if(x == ex && y == ey) ex = -1, terminate++; // second click on locust square
+	else if(ex > 100 && 2*ex-xx-202 == x && 2*ey-yy == y) ex -= 101, terminate++;
+	if(same && ex < 0 && xx < 100 && board[y][x] & 1<<29 && useAI[active]) { ShowMessage("Thinking"); setTimeout('AiMove()', 100); xx = -1; return; } // null move
+	if(xx < 0 || piece & 2048-1 && !same && xx < 100 && ((piece ^ board[yy][xx]) & 1024) == 0 && (piece & 511) <= nType && !sequel && !(piece & 1<<30))
+	{
+		if(piece == 0 || (piece & 511) > nType && !pacoMode) return;
+		if(xx >= 0 && !Move(xx, yy, x, y, ex, ey, 1022)) return; // opportunity to merge with own piece
+		if(piece & 2048) { // blue square on own piece = relay
+			ex = x;
+			ey = y;
+			phase *= 2;
+			Display();
+			GenMoves(xx, yy, phase);
+			ShowMessage("<b>Move activated piece</b>");
+			xx = x;
+			yy = y;
+			ex = ey = -1; // new mover, fake first click on it
+			return;
+		}
+		Lowlight();
+		if(xx >= 0) Display();
+		xx = x;
+		yy = y;
+		ex = -1;
+		phase = 1;
+		preClick = piece;//this never shows up again. Why is this here?
+		Highlight(x, y, "#80FF80");
+		hx1 = x;
+		hy1 = y;
+		if(x < 100)
+		{
+			var h = board[y][x];
+			var tmp = (activePlayer & 1024 ? piece >> 3 & 7 : piece & 7 | 1024);
+			if(y > 1 && y < 6) tmp |= 512;
+			if((piece & 511) > nType) board[y][x] = tmp, pacify = 1;
+			if(!autoGate || y && y != ranks-1) GenMoves(x, y, 1);
+			board[y][x] = h;
+			pacify = 0;
+		}
+		ShowMessage("Click to-square:");
+		if(x < 100) SetPiece(x, y);
+	} else if(piece & 2048) { // blue square
+		if(ex >= 0) ex += 101;	// kludge to indicate second locust victim (must be in-line!)
+		else ex = x, ey = y;
+		phase *= 2;
+		Display(); // erase old markers
+		GenMoves(xx, yy, phase);
+		ShowMessage("<b>Enter " + (phase == 2 ? 'second' : 'third') + " leg of move</b>");
+	}
+	else
+	{
+		if(xx != x || yy != y || ex >= 0)
+		{
+			if(sequel && (piece & 511) <= nType && (piece & 511) != 0 && ((sequel ^ piece) & 1024) == 0) return;
+			if(!sequel && (piece & 511) && xx < 100 && (board[yy][xx] & 511) > nType) return; // combi to occupied square
+			if(x < 100 && !(board[y][x] & (1<<30))) { // non-highlighted destination
+				if(enforceRules) return;
+				if(board[y][x] & 511 && !terminate && xx < 100) { xx = -1; Lowlight(); Display(); Click(x, y); return; } // retry as first click
+			}
+			promoType = PromoQuery(xx, yy, x, y);
+			if(promoType < 0) return; // wait for user-click to choose
+			if(piece & 4096) { // e.p.
+				m = recordSize*(gameLen-1);
+				ex = game[m][2]; ey = game[m][3]; // set locust square on last mover
+			}
+			if(piece & (1<<13)) { // double push
+				ex = 100; // used as flag
+			}
+			if(ex >= 0 && ex < 100 && board[ey][ex] & 1<<16) xx = ex, yy = ey, ex = -1; // relay
+			if(ex < 0 && piece & 1<<17) ex = xx, ey = yy; // one-legger requests unload of victim
+			if(piece & (1<<14)+(1<<18)) { // castling
+				m = (x > xx ? 1 : -1);
+				ey = yy; ex = xx; // locust square on nearest piece
+				while((board[yy][ex+=m] & 511) == 0);
+				if(fischer >= 0) { // Fischer castling
+					x = (m > 0 ? files-2 : 2); // nominal destination
+				}
+				else if(ex == x && piece & 1<<14)
+				{
+					if(piece & 1<<18)
+					{
+						Display();
+						Highlight(xx+m, y, '#00A000');
+						Highlight(x, y, "#00A000");
+						return;
+					}
+					x = xx + m; // adjacent castling
+				}
+//statuss.innerHTML += 'castling ('+ex+','+ey+') to ('+x+','+y+')<br>';
+			}
+			if(Move(xx, yy, x, y, ex, ey, promoType)) return; // abort if WeirdPromotion says so
+			moved++;
+			if(sequel)
+			{
+				var tmp = board[y][x];
+				board[y][x] = sequel;
+				GenMoves(x, y, 1);
+				board[y][x] = tmp;
+				xx = y; yy = y; ex = -1;
+				ShowMessage("Place released " + names[sequel & 511] + ':');
+				var p = document.getElementById('relay');
+				if(p) p.innerHTML = 'Place:<br><img src="' + MakeImage(sequel & 511, sequel & 1024 ? blackPrefix : whitePrefix) + '">';
+				return;
+			}
+		}
+		else
+		{
+			Lowlight();
+			Display();
+		}
+		ShowMessage("Next move:");
+		if(useAI[active] && moved) ShowMessage("Thinking"), setTimeout('AiMove()', 100);
+		xx = -1;
+		px = -1;
+		ex = -1;
+	}
+}
+
+function RightClick(x, y)
+{
+	if(x >= 100) return;
+	if(touched)
+	{
+		Display();
+		touched = 0;
+		return;
+	}
+	var piece = board[y][x] & 2048 - 1 - 512;
+	if(piece == 0)
+	{
+		Seek(0);
+		if(!useAI[active]) gameLen = 0;
+		return;
+	}
+	ShowMoves2(active, piece & 511, -2, 0);
+}
+
+function SetPiece(x, y)//called by Click and NewClick
+{
+	"use strict";//no issues spotted(not called yet)
+	console.log("SetPiece");
+	var pd = document.getElementById('piecedesc' + active);
+	if(pd == null) return;
+	pd.innerHTML =
+		'<tr><th>ID</th><th>white</th><th>nr</th><th>black</th><th>nr</th><th>name</th><th id="mp">move</th></tr>'
+		+ TableRow(board[y][x] & 511, 1)
+		+ '<tr><td colspan="7" width="' + files*sqrSize + '">Click on its name to see moves on empty board.</td></tr>';
+}
+
+function MyStack(ff, fr, tf, tr, unload)
+{
+	"use strict";//no issues spotted(not called yet)
+	console.log("MyStack",ff,fr,tf,tr,unload);
+	var hh, k = msp;
+	StackMove(ff, fr, tf, tr, unload);
+	while(k < msp)
+	{ // promotions stack more than one!
+		var m = moveStack[k++], term = dd + skip[dd];
+//Debug(m);
+		if(flags[term] == -1) term--;
+		m[99] = 101;
+		m[100] = m[-1];
+		m[-3] = flags[term] & 15 | flags[dd] & 72;
+		m[-25] = 0;
+		for(var i=1; i<m[-2]; i++) m[-25-i] = 2*(m[-2] - i); // assign click sequence (fromSqr, locustSqr1, ... , toSqr)
+		if(m[-3] & 4 && m[-2] == 3 && ep && m[4] == ep[2] && m[5] == ep[3]) m[-26] = m[-27], m[-27] = undefined, m[-3] |= 16;
+		else if(m[-3] & 8) m[-26] = 2, m[-27] = 4, m[-28] = undefined;	 // castling is entered as King step
+		else if(m[0] == m[2*i-2] && m[1] == m[2*i-1]) {for(i=1; i<m[-2]; i++) m[-25-i] = m[-26-i];} // unload at fromSqr
+		else if(m[-2] > 2 && shooters[board[fr][ff] & 511]) { // detect 'shooters'
+			var d1 = dd + skip[dd], d2 = d1 - 1, h = 2*m[-2];
+//for(var n=0; n<=skip[dd]; n++) document.getElementById('debug').innerHTML += ' (' + xStep[dd+n] + ',' + yStep[dd+n] + ',' + ranges[dd+n] + ',' + flags[dd+n] + ')';
+//Debug(' from=('+ff+','+fr+') to=('+tf+','+tr+')');//` from=(${ff},${fr}) to=(${tf},${tr})`
+			if(flags[d1] == -1) d1--, d2--;
+			if(ranges[d1] == ranges[d2] && (ranges[d1] == 1 || flags[d1] & 1<<15) && xStep[d1] + xStep[d2] == 0 && yStep[d1] + yStep[d2] == 0) {
+				if(d1 - dd > 1 || ranges[d1] != 1 || d1 - dd == 1 && (ranges[d1-1] != 1 || xStep[dd]*xStep[dd] + yStep[dd]*yStep[dd] > 3)) {
+//Debug('h='+h+' ('+m[h-2]+','+m[h-1]+') ('+m[h-6]+','+m[h-5]+')');//`h=${h} (${m[h-2]},${m[h-1]}) (${m[h-6]},${m[h-5]})`
+					if(m[0] == m[2] && m[1] == m[3]) {
+						if(d1 - dd == 1) m[-24-i] = undefined; // back-forth: eliminate back-click
+					} else do {
+						hh = m[-24-i], m[-24-i] = m[-23-i], m[-23-i] = hh;	 // swap final 2 clicks to enter destination first
+						i--;
+						d1 -= 2;
+						d2 -= 2;
+					} while(i > 0 && ranges[d1] == ranges[d2] && (ranges[d1] == 1 || flags[d1] & 1<<15) && xStep[d1] + xStep[d2] == 0 && yStep[d1] + yStep[d2] == 0);
+					m[-3] |= 32;
+				}
+			}
+		}
+	}
+}
+
+function NewClick(x, y)//only called by Click and only if diagram has newClick=truthy
+{
+	"use strict";//no issues spotted(not called yet)
+	console.log("NewClick");
+	if(nc == 0)
+	{
+		selected = board[y][x] & 2047;
+		if(!selected) return;
+		clicks = [];
+		ms2 = [];
+		xx = x;
+		yy = y;
+		selected &= 1024;
+		SetPiece(x, y);
+		for(var r=0; r<ranks; r++) for(var f=0; f<files; f++) board[r][f] &= 2047; // clear all markers
+		Lowlight();
+		msp = 0;
+		Emit = MyStack;
+		conta = (contageon != '');
+//document.getElementById('debug').innerHTML += k + '. ' + ep + '<br>';//`${k}. ${ep}`
+		nodes++;
+		for(var r=0; r<ranks; r++) for(var f=0; f<files; f++) // generate all to account for induction
+			if(board[r][f] & 511 && ~board[r][f] - selected & 1024) NewGen(f, r);
+		for(var k=1; k<msp; k++) { // make unique
+			var m = moveStack[k], n = 0;
+//document.getElementById('debug').innerHTML += k + '. (' + m + ')=' + m[-1] + ' ' + m[-2] + ': ' + m[-25] + ' ' + m[-26] + ' ' + m[-27] + ' ' + m[-28] + ' ' + '<br>';//`${k}. (${m})=${m[-1]} ${m[-2]}: ${m[-25]} ${m[-26]} ${m[-27]} ${m[-28]} `
+			for(var i=0; i<k; i++)
+			{
+				var m2 = moveStack[i], difs = 0;
+				for(var j=0; m[j] != undefined; j++)
+				{
+					if(m[j] != m2[j]) { difs++; break; }
+				}
+				if(!difs && m2[j] == undefined) {				// move was already in list
+					m2[m2[99]++] = m[-1];					// but remember its promotion, which could be different
+					moveStack[k--] = moveStack[--msp];			// delete
+				} else if(j >= 2*m[-2] && m[-2] == m2[-2]) { // different e.p. square
+					if(!n++) m2[-25-(j>>1)] = m2[-24-(j>>1)], m2[-24-(j>>1)] = j & ~1;
+					m[-25-(j>>1)] = m[-24-(j>>1)], m[-24-(j>>1)] = j & ~1; // slip in click on e.p. square
+				}
+			}
+		}
+	}
+//document.getElementById('debug').innerHTML += nc + '<br>';//nc
+	if(nc && x == clicks[nc-2] && y == clicks[nc-1]) { // repeated click terminates
+		if(nc == 2) { Lowlight(); xx = np = ex = -1; nc = 0; Display(); return; } // deselect click
+		for(var k=0; k<msp; k++) {	// delete all remaining that require more clicks
+			var m = moveStack[k];
+			if(m[-25-(nc>>1)] != undefined) {
+				moveStack[k--] = moveStack[--msp];
+			}
+//document.getElementById('debug').innerHTML += k + '. ' + m + '<br>';//`${k}. ${m}`
+		}
+	} else { // new click
+		clicks[nc++] = x;
+		clicks[nc++] = y;
+		var cc = nc >> 1;
+		for(var k=0; k<msp; k++)
+		{
+			var m = moveStack[k], t = m[-24 - cc];
+//document.getElementById('debug').innerHTML += k + '. ' + m + ' t='+t+'<br>';//`${k}. ${m} t=${t}`
+			if(t == undefined || m[t] != x || m[t+1] != y)
+			{
+				moveStack[k--] = moveStack[--msp];
+			}
+		}
+//document.getElementById('debug').innerHTML += msp + ' ' + moveStack[0] + '<br>';//`${msp} ${moveStack[0]}`
+		if(!msp && nc > 2) { // click on non-highlighted square
+			var victim = board[y][x] & 511;
+			if(victim) { nc = 0; xx = px = ex = -1; nc = 0; Display(); Click(x, y); return; } // select new piece
+			moveStack[0] = m = [clicks[0], clicks[1], x, y]; m[-2] = 2; m[99] = 101; // or force leap to empty square
+		}
+		else if(msp != 1 || moveStack[0][-25-cc] != undefined && !(moveStack[0][-3] & 8)) { // single completely entered move (or castling) is done immediately
+			var hlights = [], hsp = 0;
+			for(var k=0; k<msp; k++)
+			{
+				var m = moveStack[k], t = m[-25-cc];
+				if(t == undefined) t = m[-24-cc];
+//document.getElementById('debug').innerHTML += k + '. ' + m + ' ' + m[-2] + '['+m[-25]+','+m[-26]+','+m[-27]+','+m[-28]+'] ' + m[-3] + '<br>';//`${k}. ${m} ${m[-2]}[${m[-25]},${m[-26]},${m[-27]},${m[-28]}] ${m[-3]}`
+				for(var i=0; i<hsp; i++)
+				{
+					if(hlights[i][0] == m[t] && hlights[i][1] == m[t+1])
+					{
+						hlights[i][2]++;
+						break;
+					}
+				}
+				if(i == hsp) hlights[hsp++] = [m[t], m[t+1], m[-26-cc] == undefined || m[-3] & 8 ? 1 : 2, m[-3]];
+//document.getElementById('debug').innerHTML += k + '! ' + hlights[hsp-1] + '<br>';//`${k}! ${hlights[hsp-1]}`
+			}
+			Display();
+			for(k=0; k<hsp; k++)
+			{
+//document.getElementById('debug').innerHTML += k + ': ' + hlights[k] + '<br>';//`${k}: ${hlights[k]}`
+				var h = hlights[k], victim = board[h[1]][h[0]], col = ((h[3] & 3) == 1 ? h[3] & 64 ? '#00C000': '#00FF00' : h[3] & 64 ? '#C0C000' : '#FFFF00');
+//document.getElementById('debug').innerHTML += k + '. ' + h + '<br>';//`${k}. ${h}`
+				var hcol = (h[3] & 32 ? '#00FFFF' : victim & 511 && (h[0] != clicks[0] || h[1] != clicks[1]) ? (victim ^ selected) & 1024 ? '#FF0000' : '#0000FF' : col);
+				if(h[3] & 16) hcol = '#FF0000'; if(h[3] & 8) hcol = '#00A000'; if(h[2] > 1) hcol = '#00FFFF';
+				Highlight(h[0], h[1], hcol);
+			}
+			if(nc == 2) Highlight(x, y, "#80FF80");
+			return;
+		}
+	}
+	var m = moveStack[0];
+
+	for(i=101; i<m[99]; i++)
+	{ // make promotions unique
+		for(j=100; j<i; j++) if(m[i] == m[j]) m[i--] = m[--m[99]];
+	}
+	if(m[99] != 101) { // move offers promotion choice
+		if(promoOffset && m[99] == 102 && (!m[100] || !m[101])) { // choice between shogi promotion and deferral
+			var k = (m[100] ? m[100] : m[101]); // avoid deferral
+			px = m[2];
+			py = m[3];
+			promoMove = m;
+			ShowMessage('<b style="background:red">Promote? click here:</b> ' +
+				'<span onclick="MoveAndDisplay(promoMove,' + k + ',1)" style="color:blue"><u>yes, please?</u></span> / ' +
+				'<span onclick="MoveAndDisplay(promoMove,' + (m[100]+m[101]-k) + ',1)" style="color:blue"><u>no, thank you!</u></span>'); 
+			return;
+		}
+		var legend = document.getElementById('legend' + active);
+		if(legend) legend.style.display = 'inherit';
+		if(document.getElementById('pieceTable' + active) != null) { // can choose from table
+			ShowMessage('<b>Click on icon of piece of choice</b>', 'red');
+			for(i=100; i<m[99]; i++) Highlight(100, m[i] ? m[i] : m[-6], '#8080FF');
+			px = m[2]; py = m[3]; promoMove = m;
+			return;
+		}
+		// TODO? make a default choice
+	}
+
+//document.getElementById('debug').innerHTML += 'make move' + moveStack[0] + ' ' + m[-1] + ' ' + m[-2] + ' ' + m[-5] + ' ' + m[-6] + ' ' + m[-7] + ' ' + m[-8] + '<br>';//`make move${moveStack[0]} ${m[-1]} ${m[-2]} ${m[-5]} ${m[-6]} ${m[-7]} ${m[-8]}`
+	MoveAndDisplay(m, -1, 1, 1);
+}
+
+function MoveAndDisplay(m, promo, reply, score)
+{
+	"use strict";//no issues spotted(not called yet)
+	console.log("MoveAndDisplay");
+	if(promo >= 0)
+	{
+		for(i=100; i<m[99]; i++) if(m[i] == promo) break;
+		if(i >= m[99]) return; // ignore illegal choice.
+		m[-1] = m[i];
+		for(var i=1; i<=nType; i++) Highlight(100, i, 0), Highlight(100, i + handOffs, 0);
+	}
+	sanMoves[displayed] = ToSAN(m[0], m[1], m[2], m[3], (m[-2] > 2 ? m[4] : -1), m[5], m[-1]);
+	for(var r=0; r<ranks; r++) for(var f=0; f<files; f++) board[r][f] &= 2047; // clear all markers
+	DoMove(m, score);
+	AddMove(0, 0, 0, 0, 0, 0, 0, m);
+	hx1 = m[0]; hy1 = m[1]; hx2 = m[2]; hy2 = m[3]; // highlights
+	Display();
+	for(i=2; i<m[-2]; i++) Highlight(m[2*i], m[2*i+1], "#FF8080"); // e.p. highlights
+	var ptr = document.getElementById('sanmove'); if(ptr != null) ptr.innerHTML = sanMoves[displayed];
+	ptr = document.getElementById('game'); if(!ptr) ptr = document.getElementById('aiGame' + active);
+	if(ptr != null) ptr.innerHTML = FlushSAN();
+	if(useAI[active] && reply) ShowMessage('Thinking'), setTimeout('NewAI(' + (m[-6] & 1024) + ')', 100);
+	xx = px = ex = -1;
+	nc = 0;
+	ShowMessage('next move:');
+}
+
+function DoMove(m, score)
+{
+//Debug('move=('+m+') promo='+m[-1]);//`move=(${m}) promo=${m[-1]}`
+	if(score)
+	{
+		const tmp = center;
+		center = board;
+		ScoreMove(m, m);
+		center = tmp;
+	}
+	NewMakeMove(m);
+	ep = m;
+}
+
+function NewAI(side)
+{
+	var m = Think(1024 - side, ep);
+	if(m) MoveAndDisplay(m, -1, 0, 0);
+}
+
+function TrackMakeMove(m)
+{
+	var p = m[-6] & 1535;
+	if(loc[p] == 128*m[1] + m[0]) loc[p] = -1;
+	p = m[-1] & 1535;
+	if(loc[p] < 0) loc[p] = 128*m[3] + m[2];
+	else loc[p+512] = 128*m[3] + m[2];
+	OrigMakeMove(m);
+}
+
+function TrackUnMake(m)
+{
+	var p = m[-1] & 1535;
+	if(loc[p] == 128*m[3] + m[2]) loc[p] = -1;
+	p = m[-6] & 1535;
+	if(loc[p] < 0) loc[p] = 128*m[1] + m[0];
+	else loc[p+512] = 128*m[1] + m[0];
+	OrigUnMake(m);
+}
+
+function Down(bnr, x, y, ev)//only called on page by onmousedown, set by CreateBoard and AddEvents
+{
+	"use strict";//no changes needed
+	console.log("Down",bnr,x,y,ev);
+	if(noMouse) return;
+	SwitchDiag(bnr);
+	if(ev.button == 2)
+	{
+		RightClick(x, y);
+		return;
+	}
+	downX = x;
+	downY = y;
+	down = 1;
+	var off = sqrSize >> 1;
+	drag = document.getElementById(bnr + 'y' + y + 'y' + x);
+	draggedPiece = drag.style.backgroundImage;
+	curCell = "";
+	Click(x, y);
+	if(xx < 0) drag = null;
+	else
+	{ // attach piece to cursor if this click doesn't finish move
+		document.getElementById('board' + bnr).style.cursor = draggedPiece + ' ' + off + ' ' + off +', auto';
+		drag.style.backgroundImage = '';
+	}
+}
+
+function Up(bnr, x, y, ev)// catches up-click on empty square
+{
+	if(noMouse) return;
+	SwitchDiag(bnr);
+	if(ev.button == 2) { return; }
+	if(drag) {
+		document.getElementById('board' + bnr).style.cursor = 'default';
+		if(down && x == downX && y == downY) drag.style.backgroundImage = draggedPiece;
+		drag = null;
+	}
+	if(x == downX && y == downY) return; // ignore up on static click
+	Click(x, y); // on other square up counts as new click event
+}
+
+function Touch(bnr, x, y)
+{
+	noMouse = 1;
+	SwitchDiag(bnr);
+	if(touched > 0)
+	{
+		Interpose(bnr + 'y' + y + 'y' + x);
+		return;
+	}
+	else if(down && x == downX && y == downY)
+	{
+		Display();
+		down = 0;
+		return;
+	}
+	downX = x;
+	downY = y;
+	down = 1;
+	curCell = "";
+	Click(x, y);
+}
+
+function Copy(src, dest, l)//only called by Expand
+{
+	for(k=0; k<l; k++)
+	{
+		xStep[dest] = xStep[src];
+		yStep[dest] = yStep[src];
+		flags[dest] = flags[src];
+		skip[dest] = skip[src];
+		vector[dest] = vector[src];
+		ranges[dest++] = ranges[src++];
+	}
+}
+
+// Game navigation section
+
+function AddMove(x1, y1, x2, y2, epx, epy, promo, move)
+{
+	"use strict";//no changes needed
+	console.log("AddMove",x1,y1,x2,y2,epx,epy,promo,move);
+	p = recordSize*gameLen;
+	if(move == undefined)
+	{
+		move = [x1, y1, x2, y2];
+		move[-2] = 2;
+		if(epx >= 0) move[4] = epx, move[5] = epy, move[-2]++;
+		if(x1 < 100) move[-6] = board[y1][x1] & 2047;
+		move[-1] = (promo ? promo : move[-6]);
+	}
+	game[p] = move;
+	displayed = ++gameLen;
+}
+
+function DisplayScore(n)//only called if clocks is truthy; this file never makes it so
+{
+	if(n < 1) return;
+	const s = document.getElementById(n & 1 ^ flip ? "bottomscore" : "topscore");
+	if(s != null) s.innerHTML = scores[n-1];
+}
+
+function StartPos ()// restore start position
+{
+	"use strict";//no changes needed
+	console.log("StartPos");
+	for(i=0; i<=nType; i++) hand[i] = startHand[i], hand[i+handOffs] = startHand[i+handOffs], loc[i] = loc[i+512] = loc[i+1024] = loc[i+1536] = -1;
+	for(i=0; i<ranks; i++) for(j=0; j<files; j++) k = board[i][j] = start[i][j], loc[k+512] = loc[k], loc[k] = 128*i + j;
+	flagX = -1;
+	imitatedType = shades = 0;
+}
+
+function Seek(target)
+{
+	"use strict";//no changes needed
+	console.log("Seek",target);
+	var m, coms = document.getElementById('comments');
+	if(target - seeking == 10003 && displayed < gameLen - 1) seeking = 1, timer = setTimeout('Seek(10004);', 1000);
+	else seeking = 0;
+	if(target >= 10002) target = displayed + 1;
+	else if(target == 10001) target = displayed - 1;
+	if(target > gameLen) target = gameLen;
+	if(target < 0) target = 0;
+	if(target == displayed) { if(target) return; displayed++; } /// kludge to force setup
+	ShowMessage('gameLen = ' + gameLen + ' target = ' + target + ' displayed = ' + displayed);
+	if(target < displayed)
+	{
+		Lowlight();
+		StartPos();
+		Shuffle(1);
+		if(placement) Centralize(placement); displayed = 0;
+	}
+	while(displayed < target)
+	{
+		p = recordSize*displayed;
+		var m = game[p];
+		if(typeof(WeirdChain) == 'function') // For determining sequel
+			WeirdChain(m[0], m[1], m[2], m[3], 0, m[4], m[5]);
+		if(m[-3]) DoMove(m, 0); 
+		else
+		{
+			sanMoves[displayed] = ToSAN(m[0], m[1], m[2], m[3], m[4], m[5], m[-1]);
+			MakeMove(m[0], m[1], m[2], m[3], m[4], m[5], m[-1]);
+		}
+		hx1 = m[0]; hy1 = m[1]; hx2 = m[2]; hy2 = m[3];
+		displayed++;
+	}
+	Display();
+	if(!coms && comments[displayed] && comments[displayed] != '') ShowMessage(displayed + ': ' + comments[displayed]);
+	else
+	{
+		if(coms)
+		{
+			coms.innerHTML = '';
+			if(comments[displayed] != undefined) coms.innerHTML = comments[displayed];
+		}
+		ShowMessage(displayed == gameLen ? "Enter move:" : displayed ? 'Position after (half)move ' + displayed : 'Start position');
+	}
+	if(clocks) Display(displayed), DisplayScore(displayed-1);
+	var p = document.getElementById("game"); if(p) p.innerHTML = FlushSAN();
+}
+
+// Client section
+
+function a_get_url(channel, url)
+{
+	channel.open("GET", url, true); // asynchronous request
+	channel.send('');
+}
+
+function DisplayClock(n)
+{
+	let t = clockTimes[n];
+	let prefix = '';
+	if(t < 0)
+	{
+		t = -t;
+		prefix = '-';
+	}
+	const cname = (n ^ flip ? "topclock" : "bottomclock");
+	let sec = t%60;
+	if(sec < 10) sec = '0' + sec;
+	document.getElementById(cname).innerHTML = prefix + Math.floor(t/60) + ':' + sec;
+}
+
+function Tick()
+{
+	if(clocks)
+	{
+		--clockTimes[activeClock];
+		DisplayClock(activeClock);
+	}
+}
+
+function DisplayPV()//only called by ClockTick
+{
+	if(pvCount) return; // still busy
+	pvTarget = document.getElementById('white');
+	if(pvTarget != null) pvCount = 2, a_get_url(pvRequest, 'white.txt?t=' + date.getTime());
+}
+
+function NextPV()//only called by pvRequest.onreadystatechange, and only if status is 200
+{
+	pvTarget.innerHTML = pvRequest.responseText;
+	if(--pvCount == 0) return;
+	pvTarget = document.getElementById('black');
+	if(pvTarget != null) a_get_url(pvRequest, 'black.txt?t=' + date.getTime()); else pvCount = 0;
+}
+
+function ClockTick()//only called by itself and Init, if clocks is truthy, which it never is
+{
+	if(chatID && --refreshCnt < 0) UpdateChat(), refreshCnt = 10;
+	setTimeout('ClockTick();', 1000);
+	if(activeClock < 0) return;
+	Tick();
+	if(--ticks < 0)
+	{
+		if(elapsed++ > 50) { elapsed = 0; tickInterval *= 2; } // gradually reduce probing frequency
+		ticks = tickInterval;
+		var tmp = players.split('-');
+		if(tmp.length == 2 && tmp[activeClock] == document.myform.alias.value) return;
+		if(!seeking) FetchGame(gameNr);
+		DisplayPV();
+	}
+}
+
+function Fid(n)
+{
+	n += file1; if(n < 1) n += 23;
+	return String.fromCharCode(n + 96);
+}
+
+function Rid(n)//only called by ToSAN
+{
+	return parseInt(n) + rank1;
+}
+
+function ToSAN(ff, fr, tf, tr, ex, ey, prom)
+{
+	"use strict";//no changes needed
+	//console.log("ToSAN");
+	var fileDis = 0, rankDis = 0, anyDis = 0, EP = '', dash = '';
+	var f, r, piece;
+	if(ff >= 100)
+	{
+		if(ff > 100) return;
+		if(fr > nType) fr -= handOffs;
+		return ids[fr] + '@' + Fid(tf) + Rid(tr);
+	}
+	piece = board[fr][ff] & 1024+512-1;
+	sanX = tf; sanY = tr; san = 2;
+	GenPseudoMoves(ff, fr, 1);
+	var sanStart = san ^ 1;
+	for(r=0; r<ranks; r++) for(f=0; f<files; f++) {
+		var other = board[r][f] & 1024+512-1;
+		if(!other) continue;
+		if(!((piece ^ other) & 1024) && ids[piece & 512-1] == ids[other & 512-1] && (f != ff || r != fr)) {
+			san = sanStart;
+			GenPseudoMoves(f, r, 1);
+			if(san & 1 && // other piece of same ID can move to to-square!
+						(piece == other || (other & 511) != 1 && (piece & 511) != 1 || ids[1] != 'P')) { // no need to disambiguate Pawn with other piece
+				if(ff == f) rankDis++;
+				else if(fr == r) fileDis++;
+				else anyDis++;
+			}
+		}
+	}
+	piece &= 512-1;
+	san = 0;
+	var ID = ids[piece], victim = board[tr][tf] & 512-1;
+	if(piece == 1 && ID == 'P')
+	{
+		ID = '';
+		if(victim) fileDis++;
+	}
+	if(ex > 100)
+	{ // double locust, first victim
+		ex -= 101;
+		EP = 'x' + Fid(ex) + Rid(ey);
+		ex += ex - ff; ey += ey - fr; // set for second victim
+	}
+	if(ex >= 0 && ey >= 0 && ex < 100)
+	{
+		dash = '-';
+		if(ID == '') victim = ++fileDis; else EP += (board[ey][ex] & 2047 ? 'x' : '-') + Fid(ex) + Rid(ey);
+		if(moves[board[fr][ff] & 511].split('O').length > 1) { // piece can castle
+			if(((board[ey][ex] ^ board[fr][ff]) & 1024) == 0) {	// e.p. capture of friend is kludge to encode castlings
+				if(freeCastling) return ID + '~' + Fid(tf) + Rid(tr);
+				return (ex > ff/2 ? 'O-O' : 'O-O-O');
+			}
+		}
+	}
+	if(anyDis && !rankDis) fileDis++;
+	prom &= 512-1; if(prom > nType || prom == (piece & 511)) prom = 0;
+	var ps = (prom ? '=' + ids[prom] : '');
+	if(promoOffset && prom && prom - piece == promoOffset) ps = '+';
+	return ID + (fileDis ? Fid(ff) : '') + (rankDis ? Rid(fr) : '') + EP + (victim ? 'x' : dash) + Fid(tf) + Rid(tr) + ps;
+}
+
+function FlushSAN()
+{
+	var t = '';
+	if(haveShuffle) t = '{' + lastShuffle[-1] + '} ';
+	for(i=0; i<gameLen && typeof(sanMoves[i]) != 'undefined'; i++) t = t + (!(i & 1) ? (i/2 + 1) + '. ' : '') + sanMoves[i] + ' ';
+	return t;
+}
+
+function FetchGame(n)//only called by ClockTick
+{
+	if(n != gameNr)
+	{
+		Seek(0); gameLen = 0; // delete old game
+		elapsed = 0;
+		tickInterval = 1;
+		ticks = 1;
+	}
+	gameNr = n;
+	oldLen = gameLen;
+	var url = server + '?game=' + gameName + '&cmd=game&user=&nr=' + n;//undefined variable server
+	a_get_url(fetchRequest, url + '&t=' + date.getTime()); // asynchronous download, calls FetchCallback on completion
+}
+
+function FetchCallback()//only called by fetchRequest.onreadystatechange
+{
+	newText = fetchRequest.responseText; // no password, but nr
+	moveList = newText.split('\n');
+	m = 0;
+	gameLen = gameTimes[0] = gameTimes[1] = 0;
+	players = moveList[0]; document.getElementById('players').innerHTML = players;
+	for(i=1; i<moveList.length; i++)
+	{
+		activeClock = (i & 1); // opponent of mover
+		var coords = moveList[i].split(',');
+		if(coords[0] == 102)
+		{ // game ended
+			comments[gameLen-1] = comments[gameLen-1] + ': <b>' + coords[1] + '</b>';
+			activeClock = -1; // stop clock
+			break;
+		}
+		game[m]	 = parseInt(coords[0]); game[m+1] = parseInt(coords[1]); // convert the move to our internal format
+		game[m+2] = parseInt(coords[2]); game[m+3] = parseInt(coords[3]);
+		game[m+4] = -1; game[m+5] = -1; game[m+6] = 0; comments[gameLen] = ''; scores[gameLen] = ''; newTime = 0;
+		for(j=4; j<coords.length; j+=4)
+		{
+			if(coords[j] > 100)
+			{
+				if(coords[j] == 103) scores[gameLen] = coords[j+1];
+				else if(coords[j] == 104 && clocks) gameTimes[activeClock] = parseInt(coords[j+1]); // sync opponent's clock (that is started)
+				else comments[gameLen] = coords[j+1];
+				j -= 2; continue; // comments take only two items
+			}
+			if(parseInt(coords[j]) == game[m+2] && parseInt(coords[j+1]) == game[m+3]) { //continuation from to-sqr
+				game[m+4] = game[m+2];	 game[m+5] = game[m+3];	 // visited square is e.p.
+				game[m+2] = parseInt(coords[j+2]); game[m+3] = parseInt(coords[j+3]); // and next true to-square
+			} else if(coords[j] == 100 && coords[j+2] == game[m+2] && coords[j+3] == game[m+3]) { // drop on to-sqr
+				game[m+6] = parseInt(coords[j+1]); // promotion piece
+			} else { // second piece moved independently
+				m += recordSize; gameLen++; // consider it a new move
+				game[m]	 = parseInt(coords[j]);	 game[m+1] = parseInt(coords[j+1]);
+				game[m+2] = parseInt(coords[j+2]); game[m+3] = parseInt(coords[j+3]);
+				game[m+4] = -1; game[m+5] = -1; game[m+6] = 0;
+			}
+		}
+		m += recordSize; gameLen++;
+	}
+	serverLen = gameLen; // remember length of game on server
+	if(gameLen > oldLen)
+	{
+		if(displayed == oldLen) Seek(10003);
+		elapsed = 0;
+		ticks = tickInterval = 5;
+		if(clocks) clockTimes[0] = gameTimes[0], clockTimes[1] = gameTimes[1], DisplayClock(0), DisplayClock(1);
+	}
+	else if(gameLen < oldLen) Seek(1000);
+}
+
+// Betza compilation section
+
+function Range(s)//only called by ToXBetza
+{ // slider < 0, leaper > 0
+	var ride = 1, l = s.length, a = s[l-1]; // final char
+	if(l > 1 && s[l-2] == a) ride = -1; // rider
+	if(a == 'R' || a == 'B' || a == 'Q') return -1; // slider
+	if(a == 'D' || a == 'A') return 2*ride;
+	if(a == 'G' || a == 'H') return 3*ride;
+	if(a == 'W' || a == 'F' || a == 'K') return 1;	// stepper
+	if(a == 'C' || a == 'L') return 11*ride;
+	if(a == 'Z' || a == 'J') return 12*ride;
+	return 10*ride; // oblique leaper
+}
+
+function Betza2(betza)//only called by BetzaParse
+{
+	"use strict";//no changes needed
+	console.log("Betza2", betza);
+	var paths = betza.split('['), n = paths.length;
+	for(var i=1; i<n; i++)
+	{
+		var p = paths[i].split(']');
+		if(p.length != 2) continue;
+		var s = p[0].split('?'), nn = s.length;
+		for(var k=1; k<nn; k++)
+		{
+			paths[0] += ToXBetza(s[0]);
+			s[0] += '-' + s[k];
+		}
+		paths[0] += ToXBetza(s[0]) + p[1];
+	}
+	return paths[0];
+}
+
+function ToXBetza(multileg)//only called by Betza2
+{
+	"use strict";//no issues spotted(not called yet)
+	console.log("ToXBetza");
+	var s = multileg.split('-'), t = '';
+	var nn = s.length, l = s[0].length, f = s[0][l-1], last = Range(s[0]);
+	if(last < -1) f += f, l--;
+	s[0] = s[0].split(f)[0];
+	if(nn > 1)
+	{
+		var r = Range(s[1]);
+		if(last >= 10 && r*r == 1)
+		{ // slide or step follows oblique (assume N)
+			var c = s[1][s[1].length-1], tail = '';
+			if(c == 'B' || c == 'F')
+			{ // diagonal follows: via transparent W
+				f = 'W';
+				if(last == 11) s[0] += 'mpaf';
+				if(last == 12) tail = 'mpaf';
+			}
+			else
+			{
+				f = 'F';
+				if(last == 12) s[0] += 'mpaf';
+				if(last == 11) tail = 'mpaf';
+			}
+			s[0] += 'mpafs' + tail; 
+		}
+		else if(last > 1 && r*r == 1)
+		{ // slide or step follows distant leap; expand the leap into steps
+			var mode, h = s[0].split('n');
+			if(h.length > 1) mode = '', s[0] = h[0] + h[1]; else mode = 'mp';
+			s[0] += mode + 'af';
+			if(last == 3) s[0] += mode + 'af';
+			f = (f == 'A' || f == 'G' ? 'F' : 'W');
+		}
+		else if(last > 0 && last != -r && r < 0)
+		{ // incommensurate ride follows
+			s[0] += 'y';
+			if(r == -10) s[0] += 'y';
+			if(r == -3) s[0] += 'yy';
+			if(r == -11) s[0] += 'yyy';
+		}
+	}
+	t += s[0];
+	for(var k=1; k<nn; k++)
+	{
+		l = s[k].length;
+		var next = Range(s[k]);
+		if(s[k][l-1] == s[k][l-2]) l--;
+		t += (last*next < 0 ? 'y' : '') + 'a' + s[k].substring(0, l-1);
+		last = next;
+	}
+	return t + f;
+}
+
+function Subst(c)//only called by BetzaParse
+{
+	"use strict";//no changes needed
+	console.log("Subst");
+	if(broken == 1000) return c;
+	if(c == 'z') return lastS = (lastS == 'l' ? 'r' : 'l');
+	if(c == 'q') return lastS;
+	return c;
+}
+
+function ZigZag(s)//only called by BetzaParse
+{
+	if(s.search('a') < 0) return s; // single leg
+	if(s.search('z') < 0 && s.search('q') < 0) return s; // nothing to expand
+	var parts = s.split('z');
+	var tr = '', tl = '';
+	for(var i=1; i<parts.length; i++)
+	{
+		var q = parts[i].split('q');
+		for(var j=0; j<q.length; j++)
+		{
+			tr += (i & 1 ? 'l' : 'r') + q[j];
+			tl += (i & 1 ? 'r' : 'l') + q[j];
+		}
+	}
+	parts = parts[0].split('q');
+	for(i=parts.length-1; i>0; i--) tr = 'r' + parts[i] + tr, tl = 'l' + parts[i] + tl;
+	if(parts[0].search('l') >= 0) return parts[0] + tl;
+	if(parts[0].search('r') >= 0) return parts[0] + tr;
+	if(parts[0][parts[0].length-1] == 'h') tr = 'l' + tr.substring(1), tl = 'r' + tl.substring(1);
+	var n = parts[0].split('s');
+	if(n.length <= 1) return parts[0] + tl + parts[0] + tr;
+	return n[0] + 'l' + n[1] + tl + n[0] + 'r' + n[1] + tr;
+}
+
+function Expand(from, to, lefts)//called by Curve and BetzaParse, once each
+{
+	//"use strict";//complains about (dir), (cLeg), (mSlide), n
+	console.log("Expand");
+	let cLeg, mSlide;//added defs for sake of strict mode
+	var vx, vy, lv;
+	var len = to - from;
+	Copy(from, 0, len); // stash raw atom in save place
+	for(k=0; k<=len; k++)
+	{ 
+		count[k] = 0;
+		vector[k] |= 256; // make sure following loop terminates
+		while((vector[k] & (1 << count[k])) == 0) count[k]++; // skip invalid angles
+	}
+	while(1)
+	{
+		for(k=0; k<len; k++)
+		{ // find next valid angle combination
+			while((vector[k] & (1 << count[k])) == 0) count[k]++; // skip invalid angles
+			if(count[k] < 8) break; // no overflow, so done
+			count[k] = 0; count[k+1]++; // wrap and add carry
+			while((vector[k] & (1 << count[k])) == 0) count[k]++; // skip invalid angles
+		}
+		if(k == len) break; // no new valid angle combination
+		Copy(0, from, len); // append new path
+		let dir = 0;//added let for sake of strict mode
+		mSlide = cLeg = lv = -1;
+		for(k=0; k<len; k++)
+		{ // redirect all steps
+			dir = (dir + (k > broken && (broken ? count[broken] > 4 : 1<<count[0] & lefts) ? -1 : 1)*count[k]) & 7; // according to cumulative orientation
+			n = from + k;
+			vx = xStep[n];
+			vy = yStep[n];
+			if(dir&1)
+			{
+				if(vx == 0) vx = vy; // orthogonal 8-fold: slip in diagonals
+				else if(vx == vy) vy = 0;
+				else
+				{
+					h = vx;
+					vx = vy;
+					vy = h;
+				}
+			}
+			if(dir&2)
+			{
+				h = vx;
+				vx = vy;
+				vy = -h;
+			}
+			if(dir&4)
+			{
+				vx = -vx;
+				vy = -vy;
+			}
+			xStep[n] = vx;
+			yStep[n] = vy;
+			vector[n] = vx + 2*files*vy;
+			if(k < len-1)
+			{
+				if(flags[k] & 1 && ranges[k] != 1) mSlide = k;
+				if(flags[k] & 0x1802 && flags[k] & 0x1D) cLeg2 = cLeg, cLeg = k;
+				if(flags[k] & 0x3002) lv = k;
+			}
+		}
+		if(lv >= 0)
+		{ // the move is a locust capture (c, d or k)
+			locust |= (lv == len - 2 && ranges[n] == ranges[n-1] && (ranges[n] == 1 || flags[n] & 1<<15) && xStep[n] + xStep[n-1] == 0 && yStep[n] + yStep[n-1] == 0 ? 1 : 2);
+		}
+		if(mSlide >= 0)
+		{ // sliding non-final leg with m rights
+			if(flags[mSlide] & 0x1E)
+			{ // also has terminal rights
+				Copy(from, from+len, len); // split
+				flags[from+mSlide] &= ~1; // first gets the non-m rights
+				from += len;
+				flags[from+mSlide] &= ~0x1E; // second just m rights
+			}
+			for(k=from; k<=from+mSlide; k++) skip[k]++; // slip in loop directive
+			Copy(from+mSlide, from+len, 1);
+			skip[from+len] = 0; flags[from+len] = -1; ranges[from+len] = skip[from+mSlide] - 1;
+			from++;
+		}
+		else if(cLeg >= 0)
+		{ // mix of leg starters and non-starters
+			Copy(from, from+len, len); // split
+			flags[from+cLeg] &= ~0x1802; // first gets the non-cdx rights (silent glueing)
+			from += len;
+			flags[from+cLeg] &= ~0x1D; // second just cdx rights (start new leg)
+			if(cLeg2 >= 0)
+			{ // double split
+				Copy(from-len, from+len, 2*len); // make 3rd and 4th copy
+				flags[from-len+cLeg2] &= ~0x1802;
+				flags[from+len+cLeg2] &= ~0x1802;
+				flags[from+cLeg2] &= ~0x1D;
+				from += 2*len;
+				flags[from+cLeg2] &= ~0x1D;
+			}
+		}
+		from += len;
+		count[0]++; // step off this angle combination to trigger finding next
+	}
+	return from;
+}
+
+function Curve(old, vx, vy, dirSet, range, mode, angle)//called 5 times by BetzaParse only
+{
+	"use strict";//no issues spotted(not called yet)
+	console.log("Curve",old,vx,vy,dirSet,range,mode,angle);
+	var i, j, s;//i is defined function-scoped but never used
+	movePtr = old;
+	if(range < 2) range = (files > ranks ? files : ranks) - 1;
+	if(range > 7 && angle & 0x82) range = 7;
+	s = movePtr;
+	for(j=0; j<range; j++)
+	{
+		xStep[s] = vx;
+		yStep[s] = vy;
+		vector[s] = (j ? angle : dirSet);
+		ranges[s] = 1;
+		flags[s] = mode & 64+3 | (1<<20);
+		skip[s] = range - j - 1;
+		if(angle & 0x44) angle ^= 0x44;
+		if(!j && angle == 1) vx *= 2, vy *=2;
+		s++;
+	}
+	flags[s-1] = mode & 64+3 | 1024;
+	if(mode & 16) flags[movePtr] |= 1 << 18;
+	if(mode & 32) flags[movePtr] |= 1 << 19;
+	movePtr = Expand(movePtr, s, 0);
+}
+
+function DirSpec(c)
+{
+	if(c == 'f') return 0xC381;
+	if(c == 'b') return 0x3C18;
+	if(c == 'v') return 0x9999;
+	if(c == 'l') return 0xF060;
+	if(c == 'r') return 0x0F06;
+	if(c == 's') return 0x6666;
+	if(c == 'h') return 16;
+	return 0;
+}
+
+function DirSpecK(c)
+{
+	if(c == 'f') return 0x8301;
+	if(c == 'b') return 0x3810;
+	if(c == 'v') return 0xBB11;
+	if(c == 'l') return 0xE040;
+	if(c == 'r') return 0x0E04;
+	if(c == 's') return 0xEE44;
+	if(c == 'h') return 16;
+	return 0;
+}
+
+function BError(msg)
+{
+	var p = document.getElementById('BetzaError');
+	if(p) p.innerHTML = (msg == '' ? '' : '<span style="background:yellow"><b>Error:</b> ' + msg + '</span>');
+}
+
+function BetzaParse(piece, descriptor)//only called by BetzaCompile
+{
+	//"use strict";//complains about undeclared variables p, q, oldPtr, sym, range, mode, dirSet, c, vx, vy, a, m, d, d2; d2 could be function-scoped
+	console.log("BetzaParse", piece, descriptor);
+	var betza = Betza2(descriptor);//send the movement description for bracket-cleanup...
+	moves[piece] = betza;//...then replace original
+	first[piece] = ++movePtr; // reserve one
+	if(betza.length == 0 || betza[0] == '-')
+	{
+		flags[movePtr++] = 0;
+		return;
+	}
+	p = locust = 0;
+	var free = 0;
+	while(p < betza.length) loop: {
+		q = p;
+		oldPtr = movePtr;
+		sym = -1;
+		range = 1;
+		mode = 0;
+		dirSet = 0;
+		broken = 1000;
+		lastS = 'r';
+		do { // scan forward to atom
+			c = betza[q++];
+			if(c == 'A') { vx = 0; vy = 2; sym = 2; } else
+			if(c == 'B') { vx = 0; vy = 1; sym = 2; range = 0; } else
+			if(c == 'C') { vx = 1; vy = 3; sym = 3; } else
+			if(c == 'D') { vx = 0; vy = 2; sym = 0; } else
+			if(c == 'F') { vx = 0; vy = 1; sym = 2; } else
+			if(c == 'G') { vx = 0; vy = 3; sym = 2; } else
+			if(c == 'H') { vx = 0; vy = 3; sym = 0; } else
+			if(c == 'I') { vx = 0; vy = 1; sym = 0; mode = 1<<24; } else
+			if(c == 'J') { vx = 2; vy = 3; sym = 3; } else
+			if(c == 'K') { vx = 0; vy = 1; sym = 1; } else
+			if(c == 'L') { vx = 1; vy = 3; sym = 3; } else
+			if(c == 'N') { vx = 1; vy = 2; sym = 3; } else
+			if(c == 'O') { vx = 0; vy = 1; sym = 0; mode = 8+(1<<23); }	else
+			if(c == 'Q') { vx = 0; vy = 1; sym = 1; range = 0; } else
+			if(c == 'R') { vx = 0; vy = 1; sym = 0; range = 0; } else
+			if(c == 'W') { vx = 0; vy = 1; sym = 0; } else
+			if(c == 'Z') { vx = 2; vy = 3; sym = 3; } else
+			if(c == 'U') { vx = 0; vy = 0; sym = 0; range = -1; } else
+			if(c == '@') { vx = 2; vy = 2; sym = 5; } else
+			if(c == c.toUpperCase()) BError('unknown atom ' + c + ' ignored'); else
+			if(q >= betza.length) { BError('no atom at end'); p = q; break loop; } // no valid atom
+		} while(sym < 0);
+		if(sym == 3) broken = 0; // oblique breaks l-r symmetry in first leg
+		var str = betza.substring(p, q), origSym = sym;
+		var parts = str.split('(');
+		if(parts.length > 1)
+		{
+			var rem = parts[1].split(')');
+			if(rem.length > 1)
+			{
+				var rep = parseInt(rem[1]);
+				if(!rep) rep = files;
+				else rem[1] = rem[1].substring(rep > 9 ? 2 : 1);
+				var tt = '';
+				for(a=0; a<=rep; a++)
+				{
+					var t = parts[0];
+					for(var b=0; b<a; b++) t += rem[0];
+					t += rem[1];
+					tt += ZigZag(t);
+				}
+//				document.getElementById('debug').innerHTML = tt;
+				betza = betza.substring(0, p) + tt + betza.substring(q);
+				continue;
+			}
+		}
+		a = q - 1;
+		var origRange = range;
+		var stride = 3;
+		if(q < betza.length)
+		{
+			if(c == betza[q] && c != 'K' && c != 'Q' && c != 'R' && c != 'B')
+			{
+				q++;
+				range = 0;
+			} else while('X' == betza[q] || 'Y' == betza[q]) {
+				if('X' == betza[q++])
+				{
+					if(sym == 2) vx = vy, vy += 3, sym = 3;
+					else vy += 3;
+				}
+				else
+				{
+					vy += 2;
+					if(sym != 2) vx += 2, sym = 3;
+				}
+			}
+			var origSym = sym;
+			c = betza[q];
+			if(c <= '9' && c >= '0')
+			{
+				range = parseInt(betza.substring(q));
+				q++;
+				if(range > 9) q++;
+			}
+			else if(c == '*') range = -1, mode |= (piece == 1 ? 1<<23 : 0), q++;
+			else if(c == '$') range = -3, q++;
+		}
+		if(betza[a] == 'O' && range < 1)
+		{
+			if(range == 0) { // universal leaper
+			}
+			p = q; // ignore null-move for now
+			continue; // ignore null-move for now
+		}
+		xStep[movePtr] = vx;
+		yStep[movePtr] = vy;
+		ranges[movePtr] = range;
+		var ii = 64; // initial flag
+		for(m=p; m<a; m++)
+		{
+			c = betza[m];
+			if(movePtr != oldPtr)
+			{
+				if((c == 'z' || c == 'q') && broken == 1000) broken = 0;
+				c = Subst(c); // zq to rl translation
+				if(c == 's') broken = movePtr - oldPtr;
+			}
+			else if(sym == 2 && c == 's') broken = 0;
+			d = DirSpec(c);
+			if(d) { // directional modifier
+				if(sym == 0) { // orthogonal never combines
+					dirSet |= d & 0xFF; // use narrow
+				} else if(d == 16) {	// chiral
+					c = betza[m+1];
+					if(sym == 3)
+					{
+						if(c == 'r') { dirSet |= 0x55; m++; }
+						else if(c == 'l') { dirSet |= 0xAA; m++; }
+						else if(c == 's' || c == 'q') { dirSet = 0xFF; m++; }
+					}
+				} else { // try to combine
+					var c2 = betza[m+1];
+					if(movePtr != oldPtr)
+					{
+						if((c2 == 'z' || c2 == 'q') && broken == 1000) broken = 0;
+						c2 = Subst(c2);
+						if(c2 == 's') broken = movePtr - oldPtr;
+					}
+					if(sym != 3) { // K-system: non-degenerate octal
+						d = DirSpecK(c);
+						d2 = DirSpecK(c2);
+					} else d2 = DirSpec(c2);
+					if(d2) { // other directional modifier follows
+						if(d2 == 16) { // h: use wide set
+							dirSet |= (d >> 8); m++;
+						} else if(sym == 1) { // K
+							if(d & d2 & 0xFF00) { // two wide sets intersect
+								if(d & (d2 >> 8)) dirSet |= d & 0xFF; // doubled direction like ff
+								else dirSet |= (d & d2) >> 8; m++;		// orthogonal intersects wide sets
+							} else dirSet |= d & 0xFF; // or narrow if uncombinable
+						} else if(sym == 2) { // F
+							if(d & d2 & 0xFF00) { // two wide sets intersect
+								dirSet |= (d & d2) >> 8; m++; // use that
+							} else dirSet |= d >> 8;
+						} else { // sym=3, N
+							d2 &= (d >> 8); // intersect wide of 1st with narrow 2nd
+							if(d2) m++; else d2 = d & 0xFF; // use wide for diagonal
+							dirSet |= d2;
+						}
+					} else dirSet |= (sym & 1 ? d & 0xFF : d >> 8);
+				}
+			}
+			else if(c == 'm') { if(mode & 1) mode |= 256+128; mode |= 1; } // move
+			else if(c == 'c') { mode |= 2; } // capture
+			else if(c == 'e') { mode |= 4; } // e.p. (8 = castle)
+			else if(c == 'p') { mode |= 16; } // hop
+			else if(c == 'g') { mode |= 48; } // grasshop (range toggle)
+			else if(c == 'y') { if(mode & 32) stride++; else mode |= 32; } // spontaneous range toggle
+			else if(c == 'i') { mode |= (mode & 64 ? 1<<26 : ii); } // initial or iso
+			else if(c == 'n') { mode |= (vy > 1 ? (mode & 192 && vy < 5 ? 128|1<<14 : 128) : 1<<23); } // lame (in or nn creates e.p. rights)
+			else if(c == 'j') { mode += 256; } // jumping
+			else if(c == 'x') { mode |= 2048;} // relay
+			else if(c == 'd') { mode |= 4096;} // destroy
+			else if(c == 'k') { mode |= 1<<13;} // check
+			else if(c == 'z') { mode |= 1<<18;} // crooked
+			else if(c == 'q') { mode |= 1<<19;} // circular
+			else if(c == 'o') { mode += 1<<16;} // cylinder
+			else if(c == 'u') { mode |= 1<<21; if(skip[movePtr-1]) { flags[movePtr-1] |= 1<<22; if(flags[movePtr-1] & 4096+2) mode -= 1<<21; } } // unload
+			else if(c == 'w') BError("'w' doesn't mean anything");
+			else if(c == 'a') // multi-leg
+			{ // store the now-finished leg
+				if(dirSet == 0) dirSet = (movePtr == oldPtr ? 0xFF : origSym & 1 ? 0xEF : 0x45);
+				if(sym == 0) dirSet &= 0x55; else if(sym == 2) dirSet &= 0xAA; // 4-fold
+				if((mode & 31+2048+4096+(3<<16)) == 0) mode |= 1; // default in non-final leg is 'm'
+				if(mode & 32) origRange = range = !origRange;		// toggle range
+				else range = origRange;
+				for(k=oldPtr; k<movePtr; k++) skip[k]++;
+				skip[movePtr] = 1;
+				vector[movePtr] = dirSet;
+				flags[movePtr++] = mode;
+				if(mode & 2) modes |= 4; modes |= mode & 16;
+				dirSet = 0; mode = 0; // initialize for next leg
+				xStep[movePtr] = vx;
+				yStep[movePtr] = vy;
+				ranges[movePtr] = range;
+				sym = 1; // use non-deg octal symmetry for continuation legs direction specs
+				if(stride > 3)
+				{
+					yStep[movePtr] = stride >> 1;
+					xStep[movePtr] = stride & 1;
+					if(stride & 1 && !vx) sym = 3;
+				}
+				stride = 3;
+				ii = 1<<15; // 'i' in continuation leg stands for 'iso'
+			}
+		}
+		flags[movePtr] = mode;
+		if(dirSet == 0) dirSet = (movePtr == oldPtr ? 0xFF : origSym & 1 ? 0xEF : 0x45);
+		if(mode & 1<<24) dirSet &= 17; // imitators v-only 
+		if(movePtr == oldPtr) { if(sym == 0) dirSet &= 0x55; else if(sym == 2) dirSet &= 0xAA; }
+		vector[movePtr] = dirSet;
+		modes |= mode & 16+8;
+		if(!(mode & 3<<18))
+		{
+			if(mode & 16+8) { // old-fashioned p or g in final leg, or O atom
+				skip[movePtr] = 0; // setup to skip next leg
+				flags[movePtr++] = mode & 48+64+8; // split step into hop
+				xStep[movePtr] = vx; // and final leg in same direction
+				yStep[movePtr] = vy;
+				vector[movePtr] = 0x01; // forward
+				for(k=oldPtr; k<movePtr; k++) skip[k]++;
+				if(mode & 8) // castling
+				{
+					ranges[movePtr-1] = 0;	// first leg slides to Rook
+					if(mode & 256) flags[movePtr-1] |= 1<<25; // remember j
+					yStep[movePtr] = range; // second leg will start at from-sqr
+					mode = 8+1 | mode & 16; ranges[movePtr] = 1; // and does not capture or slide
+					free += (dirSet & 0x44) << ((mode & 256+512) >> 5); // count l & r castlings
+					if(mode & 16) free += 0x44444444;
+				}
+				else
+				{
+					ranges[movePtr] = (mode & 32 ? !range : range > 1 ? -2 : range);
+					mode &= 3;
+				}
+			}
+			else if(mode & 256 && vy == 1) { // j on W or F: ski-slide
+				skip[movePtr] = 1; // setup to skip next leg
+				ranges[movePtr] = 1;
+				flags[movePtr++] = mode & 64 | 17 | 1<<27; // split step into hop
+				xStep[movePtr] = vx; // and final leg in same direction
+				yStep[movePtr] = vy;
+				vector[movePtr] = 0x01; // forward
+				ranges[movePtr] = (range ? range - 1 : 0);
+				mode &= ~(64 + 256);
+			}
+			else if(mode & 256 && mode & 128) { // jn on distant leap
+				skip[movePtr] = 1; // setup to skip next leg
+				ranges[movePtr] = 1;
+				xStep[movePtr] = (5*vx + 8) >> 4; // split into unit step ...
+				yStep[movePtr] = (5*vy + 8) >> 4;
+				flags[movePtr++] = mode & 64 | 1;
+				xStep[movePtr] = vx; // ... and final leg in original direction
+				yStep[movePtr] = vy;
+				vector[movePtr] = 0x01; // forward
+				ranges[movePtr] = (range ? range - 1 : 0);
+				mode &= ~(64 + 256);
+			}
+		}
+		skip[movePtr] = 0;
+		asym[piece] = ((0x101*vector[oldPtr] >> 4 & 0xFF) != vector[oldPtr]);
+		if((mode & 7+4096+2048+(1<<13)) == 0) mode |= 3;	// default final leg is 'mc'
+		flags[movePtr++] = mode | 1024; // termination flag
+		j = mode & 3<<16; flags[movePtr-1] -= j; flags[oldPtr] |= j; // transfer final o, oo to first leg
+		if(!j) for(j=oldPtr; j<movePtr; j++) flags[j] += (flags[j] >> 16 & 1)*0x7FF0000; // otherwise re-interpret o
+		j = 1;
+		MoveToText(piece, oldPtr, movePtr);
+		if(mode & (1<<18)) Curve(oldPtr, vx, vy, dirSet, range, mode, 0x40), Curve(movePtr, vx, vy, dirSet, range, mode, 4);
+		else if(mode & (1<<19))
+		{
+			if(origRange) Curve(oldPtr, vx, vy, dirSet, range, mode, 0x80), Curve(movePtr, vx, vy, dirSet, range, mode, 2);
+			else Curve(oldPtr, vx, vy, dirSet, range, mode, 1);
+		}
+		else if(mode & 128 && movePtr == oldPtr + 1 && xStep[oldPtr])
+		{ // n on oblique = multi-path
+			var wav = [1, 1, 1, 1, -1, -1, -1, -1, 1, 1], v = vector[--movePtr];
+			for(i=0; i<8; i++) if(v & 1<<i) {
+				for(var mask=(1<<vy)-1; mask>=0; mask--)
+				{
+					var cnt=0;
+					for(var k=0; k<vy; k++) if(mask & 1<<k) cnt++;
+					if(cnt != vx) continue;
+					for(j=0; j<vy; j++)
+					{
+						xStep[movePtr] = wav[i];
+						yStep[movePtr] = wav[i+2];
+						if(~mask & 1<<j)
+						{
+							if(0x99 & 1<<i) xStep[movePtr] = 0;
+							else yStep[movePtr] = 0;
+						}
+						ranges[movePtr] = 1;
+						flags[movePtr] = 1;
+						skip[movePtr++] = vy - j - 1;
+					}
+					flags[movePtr-1] = mode & 3 | 1024;
+				}
+			}
+		}
+		else movePtr = Expand(oldPtr, movePtr, origSym == 3 ? 0xAA : origSym == 2 ? 0x33 : 0); // separate all orientations and shapes of the paths described by this atom
+		if((mode & 64+3) == 64+3) modes |= 1; if(mode & 4096) modes |= 2;
+		p = q; // next atom
+	}
+	flags[movePtr++] = 0; // sentinel
+	freeCastling |= free & ~0x444444;
+	if(locust == 1) shooters[piece] = 1;
+}
+
+function AddEvents(i, mute)//only called by TableRow
+{
+	"use strict";//no changes needed
+	//console.log("AddEvents");
+	if(mute) return '';
+	return ` id="${active}y${i}y100" ondragend="Relay(event)" onmousedown="Down(${active},100,${i},event)" ontouch="Touch(${active},100,${i})"`;//changed to use stringtemplating
+}
+
+function AddCount(i, c, w, mute)//only called by TableRow
+{
+	"use strict";//no changes needed
+	//console.log("AddCount");
+	if(noCounts) return '';
+	if(mute) return '<td></td>';
+	return '<td id="' + active + c + i + '" width="30">' + w + '</td>';
+}
+
+function MakeImage(n, prefix)//this crashes if origin square is clicked after manual move as im is undefined
+{
+	if(n > nType) return graphDir + 'White' + ids[n >> 3 & 7] + ids[n & 7] + '.png';
+	var im = imag[n];
+	if(im.indexOf('%') < 0) return graphDir + prefix + im; // from standard set
+	var p = im.split('%'); // custom graphics; replace % by color prefix
+	var q = p[1].split('.');
+	return p[0] + prefix + q[0] + '.' + q[1];
+}
+
+function TableRow(n, mute)//called by BetzaCompile and SetPiece
+{
+	"use strict";//no changes needed
+	console.log("TableRow",n,mute);
+	var i = n & 511;
+	var j = i + handOffs;
+	var w = hand[i]; if(w == 0) w = "-";
+	var b = hand[j]; if(b == 0) b = "-";
+	var row	= `<td width="20"><b>${ids[i]}</b></td>`;//changed to use stringtemplating
+	row += '<td' + AddEvents(i, mute) + ' width="' + sqrSize + '"><img src="' + MakeImage(i, whitePrefix) + '"></td>' + AddCount(i, 'w', w, mute);
+	row += '<td' + AddEvents(j, mute) + ' width="' + sqrSize + '"><img src="' + MakeImage(i, blackPrefix) + '"></td>' + AddCount(i, 'b', b, mute);
+	row += '<td onmousedown="ShowMoves2(' + active + ',' + n + ',-2,0)" style="word-wrap: break-word;max-width: 120px">' + names[i] + '</td>';
+	row += '<td id="m' + active + 'x' + (mute ? 0 : i) + '" onclick="DefinePiece(' + (mute ? 0 : i) + ')">' + moves[i] + '</td>';
+	return `<tr>${row}</tr>`;//changed to use stringtemplating
+}
+
+function GenMoves(x, y, legMask)
+{
+	"use strict";//no changes needed
+	console.log("GenMoves",x,y,legMask);
+	var king = board[y][x];
+	if(royal[king & 512-1])
+	{
+		var r, f, opponent = king & 1024 ^ 1024;
+		board[y][x] = 0;
+		checkFlag = 1<<15;
+		for(r=0; r<ranks; r++) for(f=0; f<files; f++) {
+			var p = board[r][f];
+			if(p & 512-1 && (p & 1024) == opponent) GenPseudoMoves(f, r, 1);
+		}
+		board[y][x] |= king;
+		testFlag = checkFlag;
+		checkFlag = 0;
+	}
+	GenPseudoMoves(x, y, legMask);
+	testFlag = 0;
+}
+
+function GenPseudoMoves(x, y, legMask)
+{
+	"use strict";//no changes needed
+	//console.log("GenPseudoMoves");
+	piece = board[y][x];
+	frozen = -1;
+	d = first[piece & 512-1];
+	if(piece & 1024) s = -1;
+	else s = 1;
+	GenInner(x, y, legMask, piece, d, s, ~0);
+}
+
+function GenInner(x, y, legMask, piece, d, s, mask)
+{
+	//"use strict";//complains about (leg),epx,hx,hy,r,victim
+	//console.log("GenInner");
+	var len, l, vx, vy, sx, sy, f;
+	let leg;//added for sake of strict mode
+//for(i=d; i<d+20; i++)
+	for(f = flags[d]; f; f = flags[++d])
+	{
+		var hop = 0, ff;
+//Debug(`${d}. ${f} (${xStep[d]},${yStep[d]})`);
+		blockFlag = ((f & 3 + (1<<13)) == 1<<13 ? 1 : 0);
+		if(f < 0)
+		{ // loop directive
+			sx = sx1 + s*xStep[d];//can crash due to sx1 being undefined on certain betza defs
+			sy = sy1 + s*yStep[d]; // continue suspended slide
+			leg = leg1;            //(defines a global only used in this funct)
+			if(sx < 0 || sx >= files || sy < 0 || sy >= ranks || (board[sy][sx] & 2047)) { d += skip[d]; continue; }
+			sx1 = sx; sy1 = sy; ++len; l = 0; // remember again
+			d -= ranges[d]; f = flags[d]; // redo follow-up leg
+			if(f & 1<<21)
+			{
+				if(leg & legMask) epx = sx, epy = sy;
+				if(leg == 1 && ex >= 0 && (sx != ex || sy != ey)) leg = 0;
+				leg += leg;
+			}
+		}
+		else
+		{
+			f |= (f & ~mask & 2) << 12;
+			f &= mask;
+			if((f & 64) && (f & 1<<26 ? (piece ^ start[y][x]) & 511 : piece & 512)) { d += skip[d]; continue; } // not virgin
+			sx = x;
+			sy = y;
+			len = l = 0;
+			ff = f;
+			hop = f >> 18 & 3;
+			if(f & 1<<24)
+			{
+				GenInner(x, y, legMask, piece, first[imitatedType], s*yStep[d], f | ~3);
+				continue;
+			}
+			if(!xStep[d] && !yStep[d]) {
+				for(i=0; i<files; i++) for(j=0; j<ranks; j++) {
+					victim = board[j][i] & 2048-1;
+					foe = (victim ^ piece) & 1024;//was less indented
+					if((i != x || j != y) && f & 2) board[j][i] |= checkFlag;
+					if(!victim)
+					{ if(f & 1) Highlight(i, j, f & 2 ? "#FFC000" : "#00FF00"); }
+					else if(foe)
+					{ if(f & 2) Highlight(i, j, "#FF0000"); }
+					else if(f & 4096) Highlight(i, j, "#0000FF");
+				}
+				continue;
+			}
+			if(f & 8 && legMask & 16)
+			{
+				if(f & 16)
+				{
+					for(i=x+xStep[d]; i>=1 && i<files-1; i+=xStep[d]) if(!(board[y][i] & 511)) Highlight(i, y, "#00FFFF"), Highlight(i, y, "#00A000"), spare[y][i] = 1<<28;
+					d++;
+					continue;
+				}
+				else Highlight(x+xStep[d+1], y+yStep[d+1], "#00A000");
+			}
+			leg = 1;
+			epx = -1;
+		}
+		vx = s*xStep[d];
+		vy = s*yStep[d];
+		if(f & 8 && s < 0 && castleFlip) vx = -vx;
+		hx = (vx*3 + 4) >> 3;
+		hy = (vy*3 + 4) >> 3;
+		r = ranges[d];
+		var successor = 0;
+		if(r == -1) { r = (piece & 1024 ? y - (ranks - 1 >> 1) : (ranks >> 1) - y) - 1; if(r <= 1) r = 1, f &= ~(1<<23); }
+		do
+		{
+			if(1) sx += vx, sy += vy, l++; else
+			while(sx + vx >= 0 && sx + vx < files && sy + vy >= 0 && sy + vy < ranks && !(board[sy+vy][sx+vx] & 511)) sx += vx, sy += vy, l++;
+			if(ff & (3<<16)) { if(sx == x && sy == y) break; if(sx >= files) sx -= files; if(sx < 0) sx += files; } // cylinder board
+			if(ff & (1<<17)) { if(sx == x && sy == y) break; if(sy >= ranks) sy -= ranks; if(sy < 0) sy += ranks; } // toroidal board
+			if(sx < 0 || sx >= files || sy < 0 || sy >= ranks) victim = 250;
+			else if((f >> 7 & 3) != 3)
+			{
+				if(
+					(f & 128) && (board[sy-hy][sx-hx]&511 || board[sy-vy+hy][sx-vx+hx]&511)
+					|| (f & 256) && !(board[sy-hy][sx-hx]&511 || board[sy-vy+hy][sx-vx+hx]&511)
+				)
+				{ d += skip[d]; break; }
+				victim = (sx == x && sy == y && l != files) ? 0 : board[sy][sx] & 2048-1; // no self-interaction
+			}
+			if((victim & 511) == 250) { // hole
+				if(f & 1<<27)
+				{
+					if(r <= 0) sx1 = sx, sy1 = sy, len = l, leg1 = leg; // for non-final slider remember where we are
+					r = ranges[++d]; f = flags[d]; vx = s*xStep[d]; vy = s*yStep[d]; successor = 1; len = l; victim = l = 0; blockFlag = 0; continue;
+				}
+				d += skip[d];
+				break;
+			}
+			if((piece & 511) == convert && f & 1024 && (piece & 512) == 0 && shades & 1 << (sx+sy & 1) + (piece & 1024 ? 2 : 0)) break; // bad conversion
+			if(spare[sy] != undefined) spare[sy][sx] |= 1<<28;
+			if(spare[sy-hy] != undefined) spare[sy-hy][sx-hx] |= 1<<28;
+			if(spare[sy-vy+hy] != undefined) spare[sy-vy+hy][sx-vx+hx] |= 1<<28;
+			if(f & 1<<15) { if(l < len && !victim) continue; if(l > len || l < len && victim) { d += skip[d]; break; } }
+			if(f & 2+(1<<13)) board[sy][sx] |= checkFlag; // mark attacked squares
+			if(!(f & 8 && r <= 0 && -r >= xStep[d+1] && -r >= -xStep[d+1])) // not for squares between R and K-to
+				blockFlag |= board[sy][sx] & testFlag; // record passing through check
+			if(victim) {
+				foe = (victim ^ piece) & 1024 | (victim & 511) > nType;
+				if(f & 2048 && f & 1024) { if(!foe && (victim ^ piece) & 511)	GenInner(x, y, legMask, piece, first[victim & 511], s, mask & ~2048); break; }
+				canCapt = (foe ? f & 2 ^ f>>12 & royal[victim & 512-1] : f & 2048+4096);
+				if(canCapt && f & 1<<22) canCapt = 0, f = 16; // unload at locust square is (color-selective) hop
+				if(canCapt && hop <= 0) {
+					if(f & 1024 + (1<<20)) {
+						if(foe && royalness[victim & 511] & (royalness[piece & 511] & 0xFFE000 || 0x30)) break; // antiTrade or iron
+						if(leg & legMask || sx == ex && sy == ey || ex > 100 && sx == 2*ex-xx-202 && sy == 2*ey-yy) Highlight(sx, sy, f & 4096 ? "#0000FF" : "#FF0000");
+						if(epx >= 0) Highlight(epx, epy, "#00FFFF"), board[epy][epx] |= 2048;
+						if(f & 1<<21) board[sy][sx] |= 1<<17;
+					} else {
+						if(leg & legMask) { epx = sx; epy = sy; }
+						if(leg == 1 && ex >= 0 && ex < 101 && (sx != ex || sy != ey)) leg = 0;
+						if(leg == 2 && ex > 100 && (sx != 2*ex-xx-202 || sy != 2*ey-yy)) leg = 0;
+						if(leg && f & 2048) board[sy][sx] |= 1<<16;
+						leg += leg;
+					}
+				}
+				if(f & 8)
+				{ // castling
+					if(skip[d] == 0)
+					{ // 2nd leg hits own Rook
+						var sxx = (fischer < 0 ? sx : sx > x ? hSide : aSide);
+						Highlight(sxx, sy, "#00A000"), board[sy][sxx] |= (1<<18); break;
+					}
+					else
+					{
+						var jj = f >> 25 & 1;
+						if(victim & 512 || sx != aSide + jj && sx != hSide - jj)
+						{ d += skip[d]; break }
+						rx = sx;
+						ry = sy; // remember Rook
+						if(fischer >= 0)
+						{
+							var ff, xk = fischer + xStep[d+1], xr = xk - vx, tst = board[y][x] + board[sy][sx];
+							for(sx=0; sx<files; sx++)
+							{
+								ff = ((sx - x)*(sx - xk) <= 0); // in king path
+								if(ff || (sx - xr)*(sx - rx) <= 0) tst -= board[sy][sx], blockFlag |= (ff ? testFlag & board[sy][sx] : 0);
+							}
+//document.getElementById('debug').innerHTML = 'tst='+(tst&2047)+' xk='+xk+' xr='+xr+'<br>';//`tst=${tst&2047} xk=${xk} xr=${xr}`
+							if(tst & 2047) { d += skip[d]; break; } // king or rook blocked
+							sx = fischer;
+							sy = y;
+						}
+						else
+						{
+							sx = x;
+							sy = y; // rewind to do 2nd leg
+						}
+					}
+				}
+				else if(!(f & 16))
+				{ // cannot hop
+					if(hop > 0) hop -= 4; else
+					if(!canCapt || f & (1<<20)) { d += skip[d]; break; } // fail also skips subsequent legs
+					if(f & 1024) break; // final leg ends path
+				}
+			}
+			else if(f & 1024 || !(f & 1)) { // final leg or no m rights
+				var epHit = 0, kc = 0;
+				if(f & 4 && flagX >= 0)
+				{
+					if(flagX > 99)
+					{
+						if(flagX - 100 == sx && flagY == sy) epHit++;
+					}
+					else
+					{
+						var ty = flagY, dy = lastY - flagY, tx = flagX, dx = lastX - flagX;
+						var adx = (dx < 0 ? -dx : dx), ady = (dy < 0 ? -dy : dy), md = (adx > ady ? adx : ady);
+						dx /= md;
+						dy /= md;
+						while(!board[ty+=dy][tx+=dx]) if(ty == sy && tx == sx) epHit++;
+					}
+				}
+				if(epHit)
+				{
+					Highlight(sx, sy, "#FF0000");
+					if(!checkFlag) board[sy][sx] |= 4096;
+				}
+				else if(f & (1<<14 | 1<<23)) { // e.p.-rights creating lame push
+					if(!checkFlag) board[sy][sx] |= 8192; // mark target so e.p. rights can be set
+				}
+				if(f & 1)
+				{
+					if(hop > 0) break;
+					var both = (!(f & 128) && !successor && l == 1 && vx*vx + vy*vy > 2 ? "#FFC000" : "#FFFF00");
+					if(f & 8)
+					{
+						if((vx > 1 || vx < -1) && fischer < 0) rx = sx, ry = sy;
+						Highlight(rx, ry, "#00A000"); if(!checkFlag) board[ry][rx] |= (1<<14);
+					}
+					else if(leg & legMask	|| ex == sx && sy == ey) Highlight(sx, sy, (ff & 64 ? (f & 2 ? "#C0C000" : "#00C000") : (f & 2 ? both : "#00FF00"))), board[sy][sx] |= 1<<29;
+					if(epx >= 0) { Highlight(epx, epy, "#00FFFF"); board[epy][epx] |= 2048; }
+//if(epx >= 0) document.getElementById('debug').innerHTML += leg+' ('+sx+','+sy+') ('+epx+','+epy+')<br>';
+				}
+				else if(legMask & 16 && leg & legMask)
+				{
+					if(f & 1024) Highlight(sx, sy, f & 4096 ? "#0000FF" : board[sy][sx] & 1<<29 ? "#FFFF00" : "#FF0000");
+					else if(f & 16+2 && ex < 0) Highlight(sx, sy, f & 2 ? "#00FFFF" : "#C0C0C0"), spare[sy][sx] |= (1 | f & 2) << 28;
+					else if((f & 17) == 1 && ex < 0) /*Highlight(sx, sy, "#E0E0E0"),*/ spare[sy][sx] |= 1 << 28;
+				}
+				if(--r != 0) continue; // continue ray scan if range permits
+				d += skip[d]; break; // fail if it doesn't
+			}
+			else if((f >> 7 & 3) == 3)
+			{
+				if(leg & legMask) epx = sx, epy = sy;
+				if(leg == 1 && ex >= 0 && ex < 101 && (sx != ex || sy != ey)) leg = 0;
+//document.getElementById('debug').innerHTML += leg+' ('+sx+','+sy+')<br>';//`${leg} (${sx},${sy})`
+				leg += leg;
+			}
+			else if(f & 1<<20)
+			{
+				if(f & 1 && hop <= 0) Highlight(sx, sy, "#FFFF00");
+				if(hop == -1) { d += skip[d]; break; }
+			}
+			else
+			{
+				if(r <= 0) sx1 = sx, sy1 = sy, len = l, leg1 = leg; // for non-final slider remember where we are
+				if(legMask & 16 && f & 2 && (f & 17) != 17 && ex < 0) Highlight(sx, sy, f & 2 ? "#00FFFF" : "#C0C0C0"), spare[sy][sx] |= (1 | f & 2) << 28;
+				else if(legMask & 16 && (f & 17) == 1 && ex < 0) /*Highlight(sx, sy, "#E0E0E0"),*/ spare[sy][sx] |= 1 << 28;
+			}
+			if(f & 1<<22) { // pre-unload
+				if(leg & legMask) { epx = sx; epy = sy; }
+				if(leg == 1 && ex >= 0 && (sx != ex || sy != ey)) leg = 0;
+				leg += leg;
+			}
+			r = ranges[++d];
+			successor = 1;
+			if(r == -2)
+			{
+				r = ranges[d-1] - l;
+				if(r == 0) break;
+			}
+			f = flags[d]; vx = s*xStep[d]; vy = s*yStep[d]; len = l; victim = l = 0; if(!(f&8)) blockFlag = 0; // next leg
+			if(f & 8 && s < 0 && castleFlip) vx = -vx; hx = (vx*3 + 4) >> 3; hy = (vy*3 + 4) >> 3;
+		} while(!victim);
+	}
+}
+
+function StackMove(ff, fr, tf, tr, unload)
+{
+	"use strict";//no changes needed
+	//console.log("StackMove");
+	const m = [ff, fr, tf, tr]; // basic move
+	var j, v = 0, extra = 0, type = board[fr][ff] & 511;
+
+	if(zonal)
+	{
+		var bz = CustomZone(tf, tr, type, board[fr][ff] & 1024, ff, fr, killX[0], killY[0]);
+		if(bz < 0) m[-21] = -bz;
+		else if(bz) return; // enforce custom piece confinement
+	}
+
+	if(khit) throughCheck = msp;
+
+	if(autoGate)
+	{
+		if(fr == 0 || tr == 0 || fr == ranks-1 || tr == ranks-1) return; // reject moves to or from gating rank
+		if(!(board[fr][ff] & 512) && (fr == 1 || fr == ranks-2))
+		{	 // virgin piece moves from back-rank
+			var gr = (fr == 1 ? 0 : ranks-1), gf = ff; // calculate gate
+			if(kills > 1 && (board[gr][ff] & 511) == 250) gf = killX[kills-1]; // castling, try also at Rook
+			if((board[gr][gf] & 511) != 250)
+				unload = 0, AddKill(gf, fr), AddKill(gf, gr), extra = 2; // add stepping gated piece on-board
+		}
+	}
+
+	j = kills;               //
+	m[-2] = kills + 2 - eps; // usually 'undefined'
+	m[-5] = unload;          //
+	for(var i=0; i<kills; i++) m[2*i+4] = killX[--j], m[2*i+5] = killY[j]; // append any locust squares
+	kills -= extra;
+
+	if(conta && choice[type+1024] != 2)
+	{ var w = board[tr][tf] & 511; if(choice[w+1024] == 1) v = w + stm; } // contageon
+	if(type <= maxPromote && !v)
+	{	// promotion mess (but only for promotable types)
+
+		var enter = (stm ? tr < promoZone : tr >= ranks - promoZone); // ends in zone
+		var leave = (stm ? fr < promoZone : fr >= ranks - promoZone); // starts in zone
+
+		if(promoOffset)
+		{ // Shogi style: fixed type or defer, but tricky as to when you can do it
+
+			if(holdingsType ? enter || leave // with drops all zone touches
+					: (leave ? board[tr][tf] & 2047 : enter)) { // enter or capture within
+				var promo, c = [], ot = type;//why define promo function-scoped when it's never used again?
+				for(i=0; m[i] != undefined; i++) c[i] = m[i]; c[-2] = m[-2];
+				type += promoOffset; if(type > nType) type = promoOffset + 1; // non-existent defaults to Tokin
+				c[-1] = (weird ? CustomPromotion(ff, fr, tf, tr, type + stm, m[4], m[5]) :	type + stm);
+				if(choice[ot] == 2) v = c[-1];
+				else if(c[-1] != 1022) moveType[msp] = kind, moveStack[msp++] = c;
+			} // falls through to do deferral
+		}
+		else if(enter)
+		{ // Chess style, generate all choices
+			for(var k=1; k<=nType; k++)
+			{
+				var p = choice[k];
+				var col = (board[fr][ff] & 1024 ? handOffs : 0);
+				var promoDist = (col ? tr : ranks - 1 - tr);
+				if(p && (p != 2 || promoDist) // enforce *
+						 && (promoDist < promoDepth[k]) // enforce rank suffix
+						 && (p != 3 || hand[k + col] > 0)) { // enforce !
+					var c = [];
+					for(i=0; m[i] != undefined; i++) c[i] = m[i];
+					c[-2] = m[-2];
+					c[-1] = (weird ? CustomPromotion(ff, fr, tf, tr, k + stm, m[4], m[5]) :	k + stm);
+					if(c[-1] != 1022) moveType[msp] = kind + 32, moveStack[msp++] = c;
+				}
+			}
+			return; // no fall through
+		}
+	}
+
+	// non-promotion attempt
+	if(weird)
+	{ // can also be custom promotion
+		var cp = CustomPromotion(ff, fr, tf, tr, 1021, m[4], m[5]); // forced custom promotion replaces deferral
+		if(cp < 0)
+		{ // custom promotion was optional
+			var c = [];
+			c[-1] = 0; // also build deferral
+			for(i=0; m[i] != undefined; i++) c[i] = m[i]; c[-2] = m[-2];
+			moveType[msp] = kind; moveStack[msp++] = c; // and push it
+			m[-1] *= -1;
+		}
+		else if(cp == 1000)
+		{
+			for(var k=1; k<=nType; k++)
+			{
+				var c = [];
+				for(i=0; m[i] != undefined; i++) c[i] = m[i]; c[-2] = m[-2];
+				c[-1] = CustomPromotion(ff, fr, tf, tr, k + stm, m[4], m[5]);
+				if(c[-1] != 1022) moveType[msp] = kind + 32, moveStack[msp++] = c;
+			}
+			return;
+		}
+		else m[-1] = CustomPromotion(ff, fr, tf, tr, 0, m[4], m[5]);
+	}
+	else m[-1] = 0;
+	if(v) m[-1] = v;
+	moveType[msp] = kind;
+	moveStack[msp++] = m;
+}
+
+function AddKill(x, y)
+{
+	killX[kills] = x;
+	killY[kills++] = y;
+}
+
+function IsEpSqr(x, y)//only called by NextLeg
+{
+	for(var k=2*ep[-2]; ep[k] != undefined; k+=2) // loop over e.p. squares
+		if(ep[k] == x && ep[k+1] == y) return 1; // we are on one
+	return 0;
+}
+
+function TryEP(ff, fr, x, y, f, iso, royal)
+{
+	"use strict";//no changes needed
+	console.log("TryEP");
+	AddKill(ep[2], ep[3]); khit += royal; // make last mover locust victim
+	if(f & 1024+(1<<20)) Emit(ff, fr, x, y); // and emit its capture
+	else NextLeg(ff, fr, x, y, iso, d+1); // or continue with next leg
+	kills--;
+	khit -= royal; // clean up to continue for non-e.p.
+}
+
+function NextLeg(ff, fr, x, y, iso, d)
+{
+	"use strict";//no changes needed
+	//console.log("NextLeg");
+	var f = flags[d];	 // get leg params
+	var rg = ranges[d];
+	var vx = s*xStep[d];
+	var vy = s*yStep[d];
+	var hx = (vx*5 + 8) >> 4; // half-step (actually 5/16) rounded
+	var hy = (vy*5 + 8) >> 4; // give 1/-1 for step 2, 3 and 4
+	var len = 0, loop = 0, m;
+	var isolen = (f & 1<<15 ? iso : 0);
+	var flip = (f & 8 && castleFlip ? s : 1); // should perhaps be done for all move types?
+	vx *= flip;
+	f |= (f & ~imiMask & 2) << 12; // non-imitated c could become k
+	f &= imiMask;
+	if(!rg) rg = 100;
+	if(f & 1<<24)
+	{ // imitator
+		var olds = s; s *= yStep[d];
+		imiMask = f | ~(7|3<<12);
+		NewInner(ff, fr, first[imi], imiMask);
+		s = olds; return;
+	}
+	if(!(vx|vy))
+	{
+		for(x=0; x<files; x++) for(y=0; y<ranks; y++)
+		{
+			var victim = board[y][x] & 1024+511;
+			if(victim)
+			{
+				if(victim == 250) continue;
+				var foe = victim - stm & 1024;
+				if(f & (foe ? 2 : 2048)) Emit(ff, fr, x, y);
+			}
+			else if(f & 1) Emit(ff, fr, x, y);
+		}
+		return; // TODO: Universal Leaper
+	}
+	if(rg == -1)
+	{ // W*
+		rg = (vy < 0 ? y - (ranks - 1 >> 1) : (ranks >> 1) - y) - 1;
+		if(rg < 1) rg = 1;	 // generates e.p. rights if not limited to 1
+	}
+	if(f & 1<<21) AddKill(x, y); // signal 'unload' as locust capture on empty
+
+	ray: { do { // ray scan along current leg
+
+		// next square, off-board test and wrapping
+		x += vx;
+		y += vy;
+		var bad = 0;
+		if(x < 0)
+		{ if(f & 3<<16) x += files, loop++; else bad++; }
+		if(x >= files)
+		{ if(f & 3<<16) x -= files, loop--; else bad++; }
+		if(y < 0)
+		{ if(f & 2<<16) y += ranks, loop += 16; else bad++; }
+		if(y >= ranks)
+		{ if(f & 2<<16) y -= ranks, loop -= 16; else bad++; }
+
+		if(bad) { // off board and does not wrap
+			if(f & 1<<27) { var victim = 250; len++; } else break;
+		} else {
+			// test (non-)jumping
+			if(f & 128+256)
+			{ // j- or n-leg
+				var ix = 0, iy = 0;
+				if((f >> 7 & 3) == 3) AddKill(x, y), eps++; else
+				while((iy += hy) != vy) {
+					ix += hx;
+					var occup = board[y-iy][x-ix] & 511;
+					if(f & 256 ? !occup : occup) break ray; // jumped square(s) not as required
+					if(f & 1<<14) AddKill(x - ix, y - iy), eps++; // use locust squares to create e.p. rights
+				}
+			}
+			if(f & 8 ? len < Math.abs(xStep[d+1]) : f & 1<<23 && len) { // leave trail of e.p. rights along path
+				AddKill(x - vx, y - vy); eps++; // as locust squares (W*, n slides)
+			}
+
+			len++; m = bMap[2048*y+x]; if(m) kind |= m;
+//document.getElementById("statuss").innerHTML += 'f=' + f + ' (' + x + ',' + y + ') rg=' + rg + ' len=' + len + '<br>';
+		// step was successfully made; check what we hit
+			var victim = board[y][x] & 2047; // strips marker flags
+		}
+		if(x == ff && y == fr && !loop) victim = 0; // ignore self unless wrapped
+
+		if(ep && royal[ep[-6]&511] && IsEpSqr(x, y) // virtual royal on this square
+					&& len >= isolen && f & 2+(1<<13)) // and our move can capture here
+			TryEP(ff, fr, x, y, f, rg>1?len:iso, 1);	// emit the e.p. capture (if subsequent legs allow)
+
+		if(victim)
+		{
+			// occupied square (so leg must end here)
+			if(victim == 250) { // hole or off-board
+				if(f & 1<<27) // o-mode allows this
+					NextLeg(ff, fr, x, y, rg>1?len:iso, d+1); // so hop over it
+				break;
+			}
+			if(len < isolen) break;						// too short i leg
+			if(hop > 0) {							// curve waiting for hop
+				if(f & 1024) break;					// but no room left to land
+				hop -= 4; NextLeg(ff, fr, x, y, 0, d+1); break; // register the hop and continue curve
+			}
+
+			// figure out whether we hit what we needed (c k p/g: foe, d x p/g: friend)
+			var canCapt, foe = victim - stm & 1024;
+			if(foe) canCapt = f & 2 ^ f>>12 & royal[victim & 511]; // c or k can capture foe
+			else
+			{
+				canCapt = f & 4096; // d can capture friend
+				if(f & 8)
+				{											// 1st leg of castling is unlimited slide
+					if(f & 16) continue;								// fast castling; skip occupied
+					var jj = f >> 25 & 1;
+					if(x != aSide + jj && x != hSide - jj) break; // did not reach corner
+					var rook = board[y][x] & 2047;							// corner piece
+					if(rook & 512) break;								// rook not virgin
+					var xx = ff+xStep[d+1]*s*flip, yy = fr+yStep[d+1]; // King target from next leg
+					if(fischer >= 0)
+					{
+						var ix, iy, xr, tot = board[y][x] + board[fr][ff];
+						xx += fischer - ff; kills -= eps; eps = 0; // correct king target, redo e.p. squares
+						xr = xx - vx;										// rook destination file
+						for(ix=0; ix<files; ix++)
+						{
+							iy = ((ix - ff)*(ix - xx) <= 0);						// ix in king path
+							if(iy || (ix - xr)*(ix - x) <= 0) {						// or in rook path
+								tot -= board[y][ix];							// accumulate obstacles
+								if(iy) AddKill(ix, y), eps++; // e.p. squares on king path
+							}
+						}
+						if(tot & 2047) return; // other than K and R in path
+						AddKill(xr, y);										// unload R on rook destination
+					} else if(castleGap > 0)
+							 AddKill(xx - vx*castleGap, yy - vy*castleGap); // 'unload' Rook next to it
+					else AddKill(ff - vx*castleGap, fr - vy*castleGap); // or next to King start square
+					AddKill(x, y); // and locust-capt own Rook
+					Emit(ff, fr, xx, yy, rook|512);							// add 2nd leg now
+					break;												// cannot have other modes
+				}
+				if(f & 2048) {												// x leg (induction) only on friends
+					if(f & 1024) {											// final leg, borrow moves from victim
+						if(board[fr][ff] - victim & 511) NewInner(ff, fr, first[victim & 511], imiMask & ~2048); // but not if same type
+					} else NextLeg(x, y, x, y, rg>1?len:iso, d+1);					// induce remaining legs on victim
+				}
+			}
+			if(canCapt && f & 1<<22) canCapt = 0, f |= 16;// unload on locust square = color-selective hop
+
+			if(canCapt) {											// common treatment of c d
+				if(f & 1024+(1<<20)) Emit(ff, fr, x, y);		// final leg or optional curve termination: generate capture
+				else {											// non-final leg
+					AddKill(x, y);									// add locust square for victim
+					NextLeg(ff, fr, x, y, rg>1?len:iso, d+1); // and try next leg
+					kills--;									// clean it up (we might still do hop)
+				}
+			}
+			if(f & 16)
+			{
+				if(hopsel) { // test for hop ban
+					vx = board[fr][ff]; // mover
+					f = (vx & 511) + nType*(victim & 511);
+					if(!((vx ^ victim) & 1024)) f += typ2;
+					if(matrix[f] < -997) break;
+				}
+				NextLeg(ff, fr, x, y, rg>1?len:iso, d+1); // p/g leg never final; do nothing here and continue
+			}
+			break; // leg always terminates at obstacle
+
+		} else {
+
+			// empty square (so leg might continue)
+			if((f & 24) == 24 && len <= xStep[d+1]*vx) {				// fast castling
+				var jj = f >> 25 & 1;
+				var xx = (vx > 0 ? hSide-jj : aSide+jj), rook = board[y][xx];
+				kills = eps = 0;
+				AddKill(ff, fr);
+				AddKill(xx, fr);
+				if(rook && !(rook & 512)) Emit(ff, fr, x, y, rook|512);
+				continue;
+			}
+			if(ep && f & 4 && IsEpSqr(x, y))					// we hit an e.p. square and are e.p.-capable
+				TryEP(ff, fr, x, y, f, rg>1?len:iso, 0);			// emit the capture
+			if(!(f & 1) || len < isolen) continue;					// no m or too short (i!), so no move to here
+			if(f & 1024+(1<<20)) {							// final leg or optional curve termination
+				if(hop <= 0) Emit(ff, fr, x, y);				// we have move if not waiting for hop (which only curves do)
+			} else {								// otherwise try remaining legs from here
+				var savKills = kills, savEps = eps;				// but make sure this does not change kills and eps
+				NextLeg(ff, fr, x, y, rg>1?len:iso, d+1);
+				kills = savKills, eps = savEps;
+			}
+			if(f & 1<<20 && !(f & 1024)						// curve in a non-final leg
+									 && hop != -1) NextLeg(ff, fr, x, y, 0, d+1); // must be continued if not after g hop
+			if(isolen > 0) break;							// do not continue past equal length
+
+		}
+
+	} while(len < rg); } // do next square of ray, when range allows
+}
+
+function NewInner(ff, fr, d, mask)
+{ // generate move set 'd' from square (ff,fr)
+	"use strict";//no changes needed
+	//console.log("NewInner");
+	var f;
+	frozen = -1;
+	while((f = flags[d]))
+	{ // for all directions
+		if(!(f & 64) ||		// no virginity required
+			 !(f & 1<<26
+				 ? ((board[fr][ff] ^ start[fr][ff]) & 511)
+				 : board[fr][ff] & 512)) { // or piece is virgin
+			kills = eps = khit = kind = 0; // prepare kill stack
+			var b = bMap[2048*fr+ff];
+			kind = (b ? b : 0);
+			hop = f >> 18 & 3;		// broadcast whether z or q trajectory is p or g
+			imiMask = mask;
+			dd = d;
+			if(f & 64 && royal[board[fr][ff] & 511]) killX[kills] = ff, killY[kills++] = fr, eps = 1; // forbid initial move out of check
+			NextLeg(ff, fr, ff, fr, 0, d); // try generating the (multi-leg?) move
+		}
+		if(frozen > 0) break;				// suppress other moves of immobilized piece
+		d += 1 + skip[d];				// next move
+	}
+}
+
+function NewGen(x, y)
+{
+	"use strict";//no changes needed
+	//console.log("NewGen",x,y);//called ridiculously often, so no logging
+	var piece = board[y][x];				// get piece on given square
+	stm = piece & 1024;					// broadcast side to move
+	if(paralyze && CustomZone(x, y, 0, stm)) return; // piece is immobilized
+	s = 1 - (2 & stm >> 9);					// set up flipping of black moves
+	NewInner(x, y, first[piece & 511], ~0); // generate its moves
+	if(handSwap) {						// generate stationary promotions
+		var t = piece & 511, c = ids[t];
+		for(var p=1; p<nType; p++) if(p != t && ids[p] == c && hand[stm+p]) {
+			var m = [x, y, x, y];
+			m[-1] = stm + p;
+			m[-2] = 2; m[-6] = piece;
+			moveStack[msp++] = m;
+		}
+	}
+//document.getElementById("statuss").innerHTML = t;
+}
+
+function GenAll(side)
+{
+	"use strict";//no changes needed
+	//console.log("GenAll");//still no
+	var r, f;
+	Emit = StackMove;
+	throughCheck = 0;
+	for(r=0; r<ranks; r++) for(f=0; f<files; f++) {
+		var piece = board[r][f];
+		if(piece && (piece & 1024) == side) NewGen(f, r);
+	}
+}
+
+function ScoreMove(m, last)
+{
+	"use strict";//no changes needed
+	//console.log("ScoreMove");//no
+	var victim, piece = board[m[1]][m[0]];
+	var stm = piece & 1024, type = piece & 511;
+	var k, gain, specials = 0;
+	// move data: -8    -7     -6    -5     -4       -3   -2    -1    0     1     2   3   4      5
+	//        ... kill1 victim piece unload material gain flags promo fromX fromY toX toY kill1X kill1Y ...
+	// so the occupant of (2k,2k+1) is stored at -6-k
+	// for castling kill1 is the Rook
+
+	if(type == convert && (piece & 512) == 0)
+	{ // virgin convertible piece
+		var nShade = shades | 1 << (m[2]+m[3] & 1) + (stm ? 2 : 0);	// set square shade it moves to
+		if(nShade == shades) return -15000; // other already moved there => illegal
+		shades = nShade; // remember shade is now occupied
+	}
+
+	gain = (pClass[type] ? center[m[3]][m[2]] - center[m[1]][m[0]] : 0);		 // centralization bonus
+	if(type <= maxPromote && pieceValue[type] < 100) {	// pawn push bonus (TODO: non-FIDE Pawns)
+		gain += (strength[1-side] > 3520 ? 1280 : 4800 - strength[1-side]) >> 7;
+		if(m[0] == 1 || m[0] > 1 && (board[m[1]][m[0]-2] & 511) != type) gain -= 10;
+		if(m[0] == files-2 || m[0] < files-2 && (board[m[1]][m[0]+2] & 511) != type) gain -= 10;
+		if(m[2] == 1 || m[2] > 1 && (board[m[3]][m[2]-2] & 511) != type) gain += 5;
+		if(m[2] == files-2 || m[2] < files-2 && (board[m[3]][m[2]+2] & 511) != type) gain += 5;
+	}
+	if(royal[type])
+	{
+		var side = stm >> 10;
+		if(pieceValue[type] == strength[side]) gain *= 3; // bare King
+		if(strength[1-side] > 1100) gain = -20; else {		// discourage King moves
+			var dx1 = m[0] - last[2], dx2 = m[2] - last[2];
+			var dy1 = m[1] - last[3], dy2 = m[3] - last[3];
+			gain += (dx1*dx1 + dy1*dy1 - dx2*dx2 - dy2*dy2)*5; // award approaching action
+		}
+	}
+	if(m[-21]) specials |= m[-21]; // winning target
+	if(m[-1]) { // possible promotion
+		if(m[-1] & 0x300) { // promotion used as kludge; restructure move
+			if(!(m[-1] & 512)) m[-5] = m[-1] & 0x4FF, m[-1] = 0, m[-18] = -1; // unload
+			else {
+				k = 2*m[-2];
+				var c = m[-1] & 255, f = !c, n = 0, x = m[2], y = m[3];	// destination
+				if(f) c = 255; // atomic capture, destroy all adjacent non-pawn
+				if(!x) c &= 0x1F; else if(x == files - 1) c &= 0xF1; // force on-board
+				if(!y) c &= 0xC7;
+				else if(y == ranks - 1) c &= 0x7C;
+				while(c)
+				{
+					if(c & 1)
+					{
+						var x2 = x + wave[n], y2 = y + wave[n+2], p = (x2 != m[0] || y2 != m[1] ? board[y2][x2] : 0);
+						if(!f || (p & 511) > atomic && (atomic || p - stm & 1024)) m[k++] = x2, m[k++] = y2, m[-2]++; // add burn victim
+					}
+					c >>= 1; n++;
+				}
+				if(atomic) gain -= pieceValue[piece&511], m[-1] = 251; else m[-1] = 0;
+			}
+		}
+		else if(m[-1] == 251) gain -= pieceValue[piece&511];
+		else gain += pieceValue[m[-1]&511]*(m[-1] - stm & 1024 ? -1 : 1) - pieceValue[piece&511], m[-1] |= 512; // promotion gain
+	}
+
+	board[m[1]][m[0]] = shadow[m[1]][m[0]]; // remove piece, to recognize unload on start square
+	m[-6] = piece;
+	var mask = 0x1152551;				 // unit bits of property counters
+	for(k=1; k<m[-2]; k++)
+	{ // regular and locust victims
+		var x = m[2*k], y = m[2*k+1];
+		m[-k-6] = victim = board[y][x];		 // record old board state
+		var vtype = victim & 511;
+		if(vtype)
+		{
+			if(victim-stm & 1024) {		 // capture foe, regular or locust
+				gain += pieceValue[vtype] + center[y][x]; // count captured value
+				if(last[-19]) { // anti-trade in force; test for counter-strike and temp royalty
+					var s = 1 + 50*y + x;
+					if(last[-19] == -s) specials |= 0x1000; // hit temp royalty, set win flag
+					if(1 + 50*last[1] + last[0] == s ||		 // capture of mover is never counter-strike
+						 vtype != last[-19]) mask &= ~0x40;	 // and against other type neither, so remove from test
+				}
+				specials += royalness[vtype] & mask;			// collect royalty and ironhood of victims
+			} else if(!m[-5]) {						 // pre-initialized unload must be castling
+				if(royalness[vtype] & 0x401) return m[-3] = -15000;// blowing up own royal is forbidden
+				gain -= pieceValue[vtype] + center[y][x]; // otherwise count self-destruction value
+			} else gain = 50;
+		} else if(k > 1) { // empty locust square: unload
+			if(m[-5] == undefined) {					// is not pre-initialized
+				m[-5] = m[-7];						// unload victim (perhaps fall-back on locust victim?)
+				gain = center[y][x] - center[m[3]][m[2]]; // award its displacement
+			} else gain = (m[-5] || m[-2]>4 ? 50 : 30); // castling R deposit or auto-gating
+		}
+		mask = 0x1552551;		 // antiTrade 4 only for locust captue
+	}
+	board[m[1]][m[0]] = piece;
+
+	if(specials) { // special eval for game-terminating moves
+		a = royalness[type];
+//document.getElementById("statuss").innerHTML += 'gain='+gain+' s='+specials.toString(16)+' a='+a.toString(16)+' t='+type+' thr=' + threshold+' pv='+pieceValue[type]+'<br>';
+		if(specials & 0x30 ||			// iron victim
+			 specials & 0xC0 && last[-19] > 0 || // temp iron
+			 specials & a & 0xFFE000) // rel iron
+			gain = -15000; // this was all illegal no matter what
+		else { // not instantly forbidden
+			m[-20] = specials & 0xC0F; // royalty decrement
+			m[-18] = 0; // always define both royalty updates!
+			if(m[-5] & 256) m[-5] -= 256, m[-18] = -1;
+			if(specials & 0x1000 ||				// captured temp royal
+				 royalCount[stm?0:1] < m[-20])		// or exterminated royalty
+				return m[-3] = 15000;			// instant win
+			if(specials & a & 0x300 &&			// protected iron
+				gain < pieceValue[type] + threshold) // and not enough gain on the side to justify it
+				m[-19] = -(1 + 50*m[3] + m[2]);		// sets temp royal in antiTrade for next ply
+			else if(specials & ~a & 0xC0)			// special taken by non-special triggers counter-strike rule
+				m[-19] = victim & 511;			// sets temp iron in antiTrade for next ply
+		}
+	}
+
+	if(m[-1])
+	{ // promotion
+		if(m[-1] == 251) m[-1] = 0;
+		var a = royalness[type] & 0x401;
+		type	= royalness[m[-1]&511] & 0x401;
+		if(a != type)
+		{ // involves royalty change
+			if(!m[-20]) m[-20] = 0; // kludge: define m[-20] to force royalty update
+			m[-18] = a - type;			// royalty loss due to promotion
+			type = royalCount[stm?1:0] - m[-18]; // remaining royalty
+			if(type <= 0) gain = (type ? -15000 : -14999); // it killed us
+			return m[-3] = gain;
+		}
+	} else m[-1] = piece | 512;
+
+	if(royalCount[stm?1:0] == 0)
+	{ // we are bare
+		if(m[-18] && m[-18]<0) return m[-3] = gain;
+		if(counterbare) gain = -14999;			 // counterbaring would have no effect, so lose
+		else {
+			a = royalCount[stm?0:1];
+			if(!m[-20] && !a) gain = -20000;	 // he was already too, kludge to flag draw
+			else if(a > (m[-20] ? m[-20] : 0)) // we did not manage to bare him
+				gain = -14999;			 // so we lose
+		}
+	}
+
+	return m[-3] = gain;
+}
+
+function OrigMakeMove(m)//gets put into NewMakeMove or called by TrackMakeMove
+{
+	"use strict";//no changes needed
+	//console.log("OrigMakeMove",m);//ludicrous
+	var k, victim, x = m[0], y = m[1], type = m[-6] & 511;
+	board[y][x] = shadow[y][x]; // remove piece
+//for(k=1; k<nType; k++) m[20+k] = hand[k], m[30+k] = hand[1024+k];
+	for(k=1; k<m[-2]; k++) {		// apply other mutations specified in move
+		x = m[2*k]; y = m[2*k+1];
+		if(m[-6-k]) {
+			victim = board[y][x]; board[y][x] = shadow[y][x]; // clear any pieces,
+			hand[victim & 1535]++;
+		} else board[y][x] = (m[-5] ? m[-5] : victim);			// or 'unload' on empty
+	}
+	board[m[3]][m[2]] = m[-1];					// place (promoted) piece
+	if(m[-1] - type & 511) {
+		if(handSwap && type > maxPromote) hand[m[-1] & 1535]--, hand[m[-6]&1535]++;
+		else if(choice[m[-1] & 511] == 3) hand[m[-1] & 1535]--;
+	}
+	if(m[-20] != undefined)
+	{
+		var color = m[-6] >> 10 & 1;
+		royalCount[1-color] -= m[-20];		// update opponent's royalty
+		royalCount[color] -= m[-18];		// update own royalty
+	}
+	if(!imitator[type]) imi = type;
+}
+
+function OrigUnMake(m)
+{
+	"use strict";//no changes needed
+	//console.log("OrigUnMake");//too many calls
+	for(var k=m[-2]; k-->0;)
+	{
+		if(board[m[2*k+1]][m[2*k]] != m[-k-6])
+			hand[m[-k-6] & 1535]--;
+		board[m[2*k+1]][m[2*k]] = m[-k-6];
+	}
+	hand[m[-6] & 1535]++;
+	if(m[-1] - m[-6] & 511)
+	{
+		if(handSwap && (m[-6] & 511) > maxPromote) hand[m[-1] & 1535]++, hand[m[-6]&1535]--;
+		else if(choice[m[-1] & 511] == 3) hand[m[-1] & 1535]++;
+	}
+	if(m[-20] != undefined)
+	{
+		var color = m[-6] >> 10 & 1;
+		royalCount[1-color] += m[-20]; // update opponent's royalty
+		royalCount[color] += m[-18]; // update own royalty
+	}
+//for(k=1; k<nType; k++) if(m[20+k] != hand[k] || m[30+k] != hand[1024+k]) document.getElementById("debug").innerHTML += m + '/' + hand + '<br>';
+}
+
+function AlphaBeta(stm, alpha, beta, eval, last, preLast, depth, borrow, ply)
+{
+	//"use strict";//complains about the variable name eval
+	//console.log("AlphaBeta");
+//if(!ply||last[2]==8&&last[3]==10&&ply==1||last[0]==7&&last[2]==8&&last[3]==10&&last[-7]&&ply==2/*||last[2]==10&&last[3]==10&&ply==3*/)document.getElementById("debug").innerHTML += ply + ' Search(' + depth + ',' + borrow + ') ' + last + ' en ' + preLast + '<br>';
+	var iter, nr, d, bestScore, bestNr = -1, firstMove = msp, oldImi = imi, oldShade = shades, alive = royalCount[stm>>10];
+	ep = (last[2*last[-2]] != undefined ? last : 0);	// broadcast e.p. squares
+	throughCheck = 0;
+	if(ep && ep[-7]&511) { // capturing e.p. (assume sliding royal)
+		NewInner(ep[2], ep[3], first[ep[-7]&511], ~0); msp = firstMove; // moves of 'ghost' of victim 
+		if(throughCheck) return (ply ? 15000 : throughCheck); // could e.p. capture royal
+	}
+	bMap = new Array();
+	if(preLast) for(nr=0; nr<preLast[-2]; nr++) bMap[2048*preLast[2*nr+1]+preLast[2*nr]] = 2; // squares mutated by us (discovery, plunder)
+	for(nr=0; nr<last[-2]; nr++) bMap[2048*last[2*nr+1]+last[2*nr]] = 1; // squares mutated by opponent (recapt, pins)
+	bMap[2048*last[3]+last[2]] = 4; // mark recapture square
+	var defScore = eval;
+	if(depth > 0 && depth < 4 && alive < 0x400) {		// low depth and loss of royal could kill us
+		Emit = StackMove; NewGen(last[2], last[3]);	// test whether moved piece checks us
+		for(nr=firstMove; nr<msp; nr++)
+		{
+			var m = moveStack[nr];
+			if((royalness[board[m[3]][m[2]]&511] & 0x401) >= alive) { defScore = -15001; break; }
+		}
+		msp = firstMove;
+	}
+	if(defScore > 0 && alive <= nobility) defScore >>= 4;
+	GenAll(stm); nodes++;
+	if(throughCheck)
+	{
+		msp = firstMove;
+		moveStack[throughCheck][-3] = 15000;
+		return (ply ? 15000 : throughCheck);
+	}
+	if(royalCount[stm?1:0] == 0) defScore = -15000, depth = (depth < 2 ? 2 : depth); // extend when we are bare, enough to see it.
+	for(iter=-1; iter<=depth; iter+=1+(iter > 1 & ~depth - iter))
+	{
+		var m, repDep, score, t, val, cost, debt, hashNr = bestNr, ialpha = alpha;
+		bestScore = -15000;
+		if((iter & ~3) == 0 && alive)
+		{ // QS (and not Kingless)
+			bestScore = defScore;
+			if(defScore > ialpha)
+			{ // stand pat works
+				if(defScore >= beta) continue; // cuts off QS iteration
+				ialpha = defScore; // use it as score base
+			}
+		}
+		for(var i=firstMove-(hashNr>=0); i<msp; i++) { // move loop: start one early for hash move
+			if(i == hashNr) continue; // don't search hash move twice
+			m = moveStack[nr = i<firstMove?bestNr:i]; // pre-first = hash move
+			ms[ply] = nr;//was unindented;part of never-read array
+			t = moveType[nr];
+			if((iter & ~1) == 0 && !t) continue; // not a new move, don't bother
+			xply = ply;//was unindented
+			score = (m[-3] != undefined ? m[-3] : ScoreMove(m, last)); // calculate eval gain
+//if(ply<2)document.getElementById("statuss").innerHTML += '	' + i + '. ' + m[-20] + ' ' + score + ' ' + bestScore + ' ' + royalCount[0].toString(16) + ' ' + royalCount[1].toString(16) + '<br>';
+//var sss = score;
+			if(score > 14000) score = 15000, iter = depth; // captured royal, kludge to terminate IID
+			else if(score <= -14999) { // losing termination
+				if(score == -15000) continue; // illegal, skip
+				if(score == -20000) score = 0; // instant draw
+			}
+			else if(t & 4 && borrow > 0) { // we speculatively captured a piece that turns out to be protected
+				if(depth >= borrow) depth -= borrow, borrow = 0; // we should not have done that so cheaply						
+				else depth = 0, score = 14000; // or in fact could not afford it at all; make the attempt fail low
+			}
+			else if(iter >= 0) { // recurse
+				val = pieceValue[m[-6]&511];
+				if(score > 52) { // move is capture
+					if(!t) cost = 2, debt = 0; // non-new always 2
+		//			else if(score > val + 40) cost = debt = 0; // new LxH capts always free
+					else if(t & 4 && score > val+40) cost = debt = 0; // LxH recapture or pin always free
+					else { // but for ExE or HxL hope it is unprotected
+						cost = (t & 4 ? 0 : 1); // recapt tentatively free, plunder still costs 1
+						debt = (score < val - 40 ? 2 : 1) - cost; // but if protected raise this to 2 for HxL and 1 for ExE
+					}
+				}
+				else
+				{
+					cost = (t ? 2 : 4); debt = (t ? 0 : -2); // noncapts cost 2, but non-new get LMR'ed 2 more
+					if(t == 2 && preLast && m[0] == preLast[2] && m[1] == preLast[3]) { // move same piece
+						score -= 20; // discourage that
+						if(eval > 0 && m[2] == preLast[0] && m[3] == preLast[1] && !preLast[-7]) score -= (score + eval) >> 2;
+					}
+				}
+				if(defScore < -14999 && cost) cost = -15000-defScore, debt = 0; // extend check evasion in QS
+				else if(m[-20] && m[-20] == royalCount[stm?0:1]) cost = debt = 0; // extend baring moves
+				if(cost > iter) score = ialpha;
+				else
+				{ // disarm what we cannot afford
+					NewMakeMove(m);
+					score = -AlphaBeta(stm^1024, -beta, -ialpha, -eval-score, m, last, iter - cost, debt, ply+1);
+					UnMake(m);
+					imi = oldImi;
+				}
+			}
+			else score -= pieceValue[board[m[1]][m[0]]&512]>>5;// MVV/LVA
+			shades = oldShade;
+//if(!ply || ms[0]==-69 && (ply==1))document.getElementById("debug").innerHTML += ply+':'+iter+': '+i+'. ('+m+')'+m[-1]+' '+royalCount[0]+' '+royalCount[1]+' ('+last+') t='+t+' b='+borrow+' c='+cost+' d='+debt+' m[-3] = '+m[-3]+' s = '+score+' e='+eval+' best = '+bestScore+' i = '+bestNr+' N='+nodes+'<br>';
+			if(score > bestScore)
+			{
+				bestScore = score; bestNr= nr;
+				if(score > ialpha)
+				{
+					ialpha = score;
+					if(score >= (iter < 0 ? 14000 : beta)) break; // beta cutoff (in MVV iter only on K-capt)
+				}
+			}
+		}
+		if(borrow < 0 && ialpha < beta && iter == depth) // parent move scores > alpha at nominal depth
+			depth -= borrow, borrow = 0; // undo the LMR
+	}
+	if(bestScore <= -15000)// mate
+	{
+		bestNr = -1, bestScore += ply;
+		if(exemption)
+		{
+			var h = threshold;
+			threshold = -15000;
+			exemption = 0;
+			bestScore = AlphaBeta(stm, alpha, beta, eval, last, preLast, depth, borrow, ply); // redo without trade ban
+			if(!ply) bestNr = bestScore;
+			threshold = h;
+			exemption = 1;
+		}
+		else if(ply < 10 && AlphaBeta(stm^1024, 14999, 15000, -eval, last, last, 0, 0, ply+1) != 15000 // in check?
+			 && stalemate == 0) bestScore = 0, bestNr = -2, last[-3] = -20000; // stalemate
+		else if(succession)
+		{
+			var kr, kf, pr, pf;
+			msp = firstMove;
+			for(var i=0; i<ranks; i++) for(var j=0; j<files; j++) { // scan board for king and successors
+				var piece = board[i][j], typ = piece & 511;
+				if(!(piece - stm & 1024))
+				{
+					if(royal[typ]) kr = i, kf = j, kt = typ; // remember royal
+					else if(typ == succession) moveStack[msp++] = [0, 0, j, i]; // push move for each successor
+				}
+			}
+			board[kr][kf] = stm + succession;	// abdicate
+			for(var i=firstMove; i<msp; i++) { // for all successions
+				pr = moveStack[i]; pr[-2] = 2; pr[-1] = 0; pr[0] = kf; pr[1] = kr; // complete move
+				board[pr[3]][pr[2]] = stm + kt;	// promote to King
+				score = -AlphaBeta(stm^1024, -beta, -ialpha, -eval+(stm ? ranks - 1 - pr[3] : pr[3])*30, pr, last, depth, 0, ply+1);
+				if(score > bestScore) bestScore = score, bestNr = i;
+				board[pr[3]][pr[2]] = stm + succession;
+			}
+			board[kr][kf] = stm + kt;
+		} else if(royalCount[stm?0:1] <= nobility) bestScore = 0, bestNr = -2, last[-3] = -20000; // draw due to lack of opponent nobility
+	}
+	msp = firstMove; // cleanup move stack
+	return (!ply ? bestNr + (bestScore == 14999 ? 10000 : 0) : bestScore); // kludge to flag checkmate in root
+}
+
+function Count(ff, fr, tf, tr)//only ever used via being set to the Emit variable
+{
+	"use strict";//no changes needed
+	//console.log("Count");
+	var victim = board[tr][tf];
+	var p = 0, rk = 1 << tf;//why define p function-scoped when never used in the function?
+	for(var k=0; k<kills; k++)
+	{
+		var x=killX[k], y=killY[k];
+		var victim2 = board[y][x], rk2 = 1<<x;
+		if(victim2 & 1024) {
+			if(!(bb2[y] & rk2) && bb[y] & rk2) points1--; // upgrade direct capture
+			bb[y] &= ~rk2;
+			points3++; if(!(bb2[y] & rk2)) lSqrs++;
+			if(victim) doubles++;
+			bb2[y] |= rk2;
+		}
+	}
+	if(bb[tr] & rk) return; // do not count doubles
+	if(victim & 1024) points1++;
+	if(!victim)
+	{
+		points2++;
+		if(fr < ranks - promoZone && tr >= ranks - promoZone) zonePts++;
+	}
+	if(ff != tf && tr > fr + 1) dist |= 1;
+	if(tf > ff + 1 || tf < ff - 1 || tr > fr + 1 || tr < fr - 1) dist |= 2;
+	if(tr < fr) dist |= 4;
+	if(tr > fr + 3) dist |= 8;
+	bb[tr] |= rk; // mark square as done
+}
+
+function RandomSetup(density)//only called by GaugeValues
+{
+	"use strict";//no changes needed
+	console.log("RandomSetup",density);
+	// set up random position
+	wDens = 0;
+	bDens = 0;
+	board = new Array();
+	for(var r=0; r<ranks; r++)
+	{
+		if(board[r] == undefined) board[r] = new Array();
+		for(var f=0; f<files; f++)
+		{
+			var x = Math.random();
+			var t = Math.random()*nType + 1;
+			board[r][f] = (x >= density ? 0 : x >= 0.5*density ? 1024+512+t : 512+t);
+			if(board[r][f] & 1024) bDens++; else if(board[r][f]) wDens++;
+			if(density == 0)
+			{
+				var h = (2*f+1-files), v = (2*r+1-ranks), w = files*files; h *= h;
+				board[r][f] = -Math.floor(v*v*2/ranks + h*h*h*0.66/(w*w*files));
+			}
+		}
+	}
+	wDens /= files*ranks;
+	bDens /= files*ranks;
+}
+
+function GaugeValues()// determine piece values from mobility
+{
+	//"use strict";//complains about conta, zonePts, doubles, lSqrs, points3, points2, points1 which would be top-level variables
+	//console.log("GaugeValues*");
+	if(gauged == active) return;
+	conta = (contageon != '');
+	const sum = new Array(), sum2 = new Array(), sumC = new Array(), sum2C = new Array(), n = new Array(), z = new Array();
+	var b = board;
+	gauged = active;
+	Emit = Count;//the only reference to or use of the Count function
+	imi = 0;
+	RandomSetup(0);
+	center = board;
+	for(var piece=1; piece<=nType; piece++)
+	{
+		sum[piece] = sum2[piece] = sumC[piece] = sum2C[piece] = n[piece] = z[piece] = code[piece] = pClass[piece] = 0;
+	}
+	for(var k=0; k<10; k++)
+	{
+		RandomSetup(0.25);
+		for(var piece=1; piece<=nType; piece++)
+		{
+			dist = 0;
+			for(var r=0; r<ranks; r++) for(var f=0; f<files; f++) {
+				if(board[r][f]) continue;
+				for(var i=0; i<ranks; i++) bb[i] = bb2[i] = 0;
+				board[r][f] = piece;
+				points1 = points2 = points3 = lSqrs = doubles = zonePts = 0;
+				var frac = 1.5 - (r + 0.5)/ranks;
+				n[piece]++;
+				NewGen(f, r);
+				if(points3) points1 += (0.1*lSqrs*points3/(lSqrs + 0.33*points3) + 0*doubles)/bDens;
+				points1 /= bDens;
+				points2 /= (1 - wDens - bDens);
+				sum[piece] += points2*frac;
+				sum2[piece] += points2*points1*frac;
+				sumC[piece] += points1*frac;
+				sum2C[piece] += points1*points1*frac;
+				z[piece] += zonePts*frac/(1 - wDens - bDens);
+				board[r][f] = 0;
+			}
+			pClass[piece] |= dist;
+		}
+	}
+	var ease = 0, best = 0, worst = 100000;
+	for(var piece=1; piece<=nType; piece++)
+	{
+		sum[piece] /= n[piece];
+		sumC[piece] /= n[piece];
+		ease += (piece <= maxPromote ? z[piece] /= n[piece] : 0);
+		var s = sum2[piece]/n[piece] - sum[piece]*sum[piece];
+		s = (s <= 0 ? 0 : Math.sqrt(s));
+		sum[piece] += 0.3*s;
+		s = sum2C[piece]/n[piece] - sumC[piece]*sumC[piece];
+		s = (s <= 0 ? 0 : Math.sqrt(s));
+		sumC[piece] += 0.3*s;
+		if(sum[piece] > files*ranks/3) sum[piece] = files*ranks/3 + (sum[piece] - files*ranks/3)*0.1;
+		baseValue[piece] = Math.floor((0.11*sum[piece] + 0.89*sumC[piece])*(33+sum[piece]*0.7));
+		if((pClass[piece] & 9) == 8) pClass[piece]= 0;
+		else pClass[piece] = 1;
+		if(valueOverride[piece]) baseValue[piece] = valueOverride[piece]; // set by hand
+//nn = baseValue[piece];
+//mm = (nn > 14000 ? 14000 : nn);
+//document.getElementById("debug").innerHTML += piece + ' pval=' + nn + '/' + mm + ' uit ' + n[piece] + '<br>';//`${piece} pval=${nn}/${mm} uit ${n[piece]}`
+//baseValue[piece] = mm;
+	}
+	if(baseValue[nType] > 14000) baseValue[nType] = 14000;
+	ease /= maxPromote;
+	for(var piece=1; piece<=nType; piece++)
+	{
+		if(piece <= maxPromote)
+		{
+			var promo = piece + promoOffset;
+			if(promo > nType) promo = promoOffset + 1;
+			f = baseValue[promo]/baseValue[piece]; n[piece] = promo;
+			if(f*z[piece] > best && z[piece] >= ease) best = f*z[piece]; // most profitable promotion gain of easy promoters
+			if(f*z[piece] < worst && z[piece] >= ease) worst = f*z[piece];
+		}
+	}
+	for(var piece=1; piece<=nType; piece++)
+	{
+		pieceValue[piece] = baseValue[piece];
+		if(promoOffset && piece <= maxPromote)
+		{
+			if(!promoZone) f = (baseValue[n[piece]] < baseValue[piece] ? 0.2 : 0.5); // assume promote on capture
+			else if(z[piece] < ease) f = 0.1;
+			else if(best == worst) f = 0.2;
+			else f = 0.1 + 0.8*(z[piece]*baseValue[n[piece]]/baseValue[piece] - worst)/(best - worst);
+			pieceValue[piece] += Math.floor(f*(baseValue[n[piece]] - baseValue[piece]));
+		}
+		if(royalness[piece] & 0x30) pieceValue[piece] *= 2;
+		if(royal[piece] && !extinction) pieceValue[piece] = 15000;
+	}
+	pieceValue[0] = pieceValue[250] = baseValue[0] = baseValue[250] = 0; // empty square
+	threshold = (thresholdPiece ? pieceValue[thresholdPiece] + 30 : 15000);
+	board = b;
+}
+
+function Walk(piece, r, f)//only called by RefineValues
+{
+	"use strict";//no changes needed
+	//console.log("Walk");
+	var tot = 0, n = 0;
+	for(i=0; i<ranks; i++) for(j=0; j<files; j++) board[i][j] = 0;
+	board[r][f] = piece;
+	for(var i=0; i<100; i++)
+	{
+		Emit = StackMove;
+		msp = 0;
+		NewGen(f, r);
+		for(var j=0; j<msp; j++)
+		{
+			var m = moveStack[j];
+			if(m[-2] != 4 || m[3] > ranks/2) moveStack[j--] = moveStack[--msp]; // throw away moves into other half
+		}
+		if(!msp) break;
+		j = Math.floor(Math.random()*msp);
+		m = moveStack[j];
+		if(!m[-1]) m[-1] = board[r][f];
+		board[r][f] = 0;
+		r = m[3];
+		f = m[2];
+		board[r][f] = m[-1];
+		n++;
+		tot += baseValue[m[-1]];
+		visited[m[-1]] = 1;
+	}
+	if(!n) return baseValue[piece];
+	return Math.floor(tot/n);
+}
+
+function RefineValues()
+{
+	"use strict";//no changes needed
+	//console.log("RefineValues");
+	for(var p=1; p<=nType; p++) if(imitator[p]) {
+		var sum=0, sum2=0, sum3 = 0;
+		for(var r=0; r<ranks; r++) for(var f=0; f<files; f++) {
+			var v = baseValue[board[r][f]&511];
+			sum += v;
+			sum2 += v*v;
+			sum3 += v*v*v;
+		}
+		sum2 /= sum;
+		sum3 /= sum;
+		pieceValue[p] = Math.floor(sum2 - 0.3 * Math.sqrt(sum3 - sum2*sum2));
+	}
+	var newValue = [], save = [];
+	for(r=0; r<ranks; r++)
+	{
+		save[r] = [];
+		for(f=0; f<files; f++) save[r][f] = board[r][f];
+	}
+	for(r=0; r<ranks/2; r++) for(f=0; f<files; f++) {
+		p = start[r][f] & 511;
+		visited = [];
+		if(p == 0 || p == 250) continue;
+		for(j=1; j <= nType; j++) visited[j] = 0;
+		var v = Walk(p, r, f);
+//Debug(`${p} pval=${v} uit ${visited}`);
+		for(p=1; p<=nType; p++) if(visited[p]) newValue[p] = Math.floor(0.1*baseValue[p] + 0.9*v);
+	}
+	for(p=1; p<=nType; p++) if(newValue[p]) pieceValue[p] = newValue[p];
+	for(r=0; r<ranks; r++) for(f=0; f<files; f++) board[r][f] = save[r][f];
+}
+
+function CountRoyals()
+{
+	"use strict";//no changes needed
+	//console.log("CountRoyals");
+	royalCount[0] = royalCount[1] = 1; // threshold for living
+	strength[0] = strength[1] = 0;
+	for(var r=0; r<ranks; r++) for(var f=0; f<files; f++)
+	{
+		var piece = board[r][f], type = piece & 511, side = piece >> 10 & 1;
+		if(!type) continue;
+		royalCount[side] += royalness[type] & 0x401;
+		strength[side] += baseValue[type];
+	}
+	for(var t=1, r=0; t<=nType; t++) r += royalness[t] & 0x401;
+	if(!r) return 0; // no royals; done
+	for(f=0; f<2; f++) {
+		if(r >= 0x400) { // true royals participate
+			royalCount[f] -= 0x400; // leaves 1 when we have a single royal
+			if(!(extinction & f+1)) royalCount[f] &= 0x3FF; // for absolute royalty, ignore any spares
+			if(r & 0x3FF && nobility < 0) royalCount[f]--;	// with baring, just having the one is a delayed loss
+		}
+	}
+	return (royalCount[1] < 0) - (royalCount[0] < 0);
+}
+
+function Think(side, last)
+{
+	//"use strict";//complains about the name eval which is apparently reserved or something
+	//console.log("Think",side,last);
+	GaugeValues();
+	RefineValues();
+	msp = nodes = 0;
+	imi = imitatedType;
+	if(CountRoyals()) {//why bother with an empty section?
+	}
+	if(royalCount[side?1:0] < 0)
+	{
+		ShowMessage('It seems I have already lost!', 'red');
+		return 0;
+	}
+	GenAll(side);
+	nodes++;
+//	if(!msp) return 0;
+	var i = Math.floor(Math.random() * msp);
+	var eval = (strength[0] - strength[1])*(side ? -1 : 1);
+	var tt = new Date();
+	var t1 = tt.getTime();
+//document.getElementById("statuss").innerHTML += 'eval = '+ eval + ' ('+strength[0]+'/'+strength[1]+')<br>';
+	var n = AlphaBeta(side, -15000, 15000, eval, last, 0, depth+2, 0, 0);
+	tt = new Date();
+	ShowMessage((tt.getTime() - t1) + 'msec ' + nodes + ' nodes');
+	if(n == -1) { ShowMessage('*** I resign! ***', 'red'); return 0; }
+	if(n == -2) { ShowMessage('*** stalemate ***', 'red'); return 0; }
+	if(n > 9999) ShowMessage(stalemate ? '*** mate! ***' : '*** checkmate! ***', 'red'), n -= 10000;
+	var m = moveStack[n];
+	if(m[-3] == 15000) ShowMessage('*** I win! ***', 'red');
+	if(m[-3] == -20000) ShowMessage('*** draw! ***', 'red');
+	return m;
+}
+
+function AutoReply(side, x, y)
+{
+	"use strict";//one change needed, changing m[00]
+	//console.log("AutoReply",side,x,y);
+	var last = [hx1, hy1, hx2, hy2]; // latest move
+	last[-2] = 2;
+	if(royalness[captPiece&511] & ~royalness[movedPiece&511] & 0xC0) last[-19] = captPiece & 511;
+	if(flagX >= 0)
+	{ // e.p. rights exist
+		var dx = lastX - flagX;
+		var dy = lastY - flagY;
+		var adx = (dx < 0 ? -dx : dx);
+		var ady = (dy < 0 ? -dy : dy);
+		var d = (adx > ady ? adx : ady);
+		dx /= d;
+		dy /= d;
+		for(var i=1; i<d; i++) last[2+2*i] = flagX + i*dx, last[3+2*i] = flagY + i*dy;
+		last[-5] = 0;
+	}
+//document.getElementById("statuss").innerHTML = 'last = ' + last + '<br>';
+	var m = Think(side, last);
+	if(m)
+	{
+		if(!(m[-1] - board[m[1]][m[0]] & 511)) m[-1] = 0;
+		if(m[-2] == 2 && m[4] != undefined) m[4] = 100; // old system to request e.p.-rights creation
+//document.getElementById("debug").innerHTML += 'last = ' + last + ' promo=' + m[-1] + ' (' + m + ') sqrs=' + m[-2] + ' unload=' + m[-5] + '<br>';
+		if(m[4] != undefined)
+		{
+				if(autoGate && (m[5] == 0 || m[5] == ranks-1))
+				{
+						if(m[-2] == 6) Move(m[0], m[1], m[2], m[3], m[8], m[9], m[-1]);
+						else					 Move(m[0], m[1], m[2], m[3], -1, -1, m[-1]);
+				}
+				else if(m[-2] == 4 && !m[-5]) Move(m[0], m[1], m[2], m[3], m[6]+101, m[7], m[-1]); // two locust victims
+				 else Move(m[0], m[1], m[2], m[3], m[4], m[5], m[-1]);
+		}
+		else Move(m[0], m[1], m[2], m[3], -1, -1, m[-1]);//change for sake of strict mode: m[0] used to be m[00]
+	}
+	oldLast = [];
+	for(i=-7; i<2*m[-2]; i++) oldLast[i] = m[i];//oldLast is never read. Why does it exist?
+//document.getElementById("statuss").innerHTML = 'score = ' + m[-3] + ' ' + nodes + ' nodes';
+}
+
+function AiMove()
+{
+	AutoReply(~movedPiece & 1024, movedX, movedY);
+}
+
+function NewGame()
+{
+	"use strict";//no changes needed
+	//console.log("NewGame");
+	Seek(0);
+	gameLen = placement = 0;
+	document.getElementById("aiGame" + active).innerHTML = '';
+	StartPos();
+	Shuffle(0);
+	Display();
+	comments = [];//resetting a top-level variable
+	var p = document.getElementById("comments");
+	if(p) p.innerHTML = '';
+	movedPiece = 1024;
+	movedX = -1;
+	movedY = -1;
+}
+
+function OneLiner(s)//only called by ParseGame. Does it really affect the original string this way?
+{
+	for(i=0; i<s.length; i++) if(s[i] == '\n') s[i] = ' ';
+}
+
+function FileID(s)
+{
+	var n = s.charCodeAt(0) - 96 - file1;
+	if(n > files) n -= 23;
+	return n;
+}
+
+function ParseGame(dnr)//only called by PasteGame
+{
+	"use strict";//no issues spotted(not called yet)
+	console.log("ParseGame",dnr);
+	var p = document.getElementById('aiGame' + dnr);
+	var game = p.innerHTML, side = 0, s = 0;
+//	game = game.replaceAll('\n', ' '); // unknown in Safari, so replaced by next line
+	OneLiner(game);
+	if(game[0] == '<')
+	{
+		while(game[0] != '>') game = game.substring(1);
+		game = game.substring(1);
+	}
+	if(game[0] == '{') mySeed = parseInt(game.substring(1)), s++;
+	NewGame();
+	var nr = 0, tmp = game.split('.');
+	game = tmp[0];
+	for(var i=1; i<tmp.length; i++) game += '. ' + tmp[i];
+	game = game.split(' ');
+	for(var i=s; i<game.length; i++)
+	{
+		var move = game[i];
+		if(move[0] == '{')
+		{
+			comments[nr] = '';
+			do {
+				comments[nr] += game[i] + ' ';
+			} while(game[i++].search('}') < 0 && i < game.length);
+			i--; continue;
+		}
+		if(move == '' || move[0] == '<' || move == '.' || move == '+') continue;
+		var n = parseInt(move); // check for move numbers
+		if(n > 0 && move[move.length-1] == '.') continue;	// and skip those
+		nr++;
+		var promo = 0, triple = 0;
+		
+		for(var j=nType; j>0; j--) if(move.indexOf(ids[j]) == 0) break;
+		if(j) move = move.substring(ids[j].length); // strip piece ID
+		move = move.split('+');
+		if(move.length > 1 && move[1] == '' && promoOffset) promo = 1023; // shogi promotion (or check?)
+		move = move[0].split('=');
+		if(move.length > 1 && move[1] != '')
+		{ // chess promotion
+			for(var jj=nType; jj>0; jj--) if(ids[jj] == move[1]) break;
+			promo = jj;
+		}
+		move = move[0];
+		var locust = 0, to = 0, sqrs = move.split('-'), castle = move.split('~');
+		if(freeCastling && castle.length > 1) move = castle[0] + castle[1], sqrs = castle; // delete the ~
+		if(sqrs.length > 1)
+		{
+			var s = sqrs[1].split('x');
+			to = sqrs[1];
+			if(s.length > 1) sqrs[0] += 'x' + s[0], to = s[1]; // kludge to handle V-d3xd1 for swap moves (Odin's Valkyrie)
+		}
+		sqrs = sqrs[0].split('x'); n = sqrs.length;
+		if(n > 1)
+		{
+			if(!to) to = sqrs[--n]; // capture
+			if(n > 1) // more than just from-square remains
+			{
+				locust = sqrs[1]; // double capture
+				if(n == 3) triple = 101; // or triple
+			}
+		}
+		else if(!to) // non-capture
+		{
+			var len = sqrs[0].length	// get to-square
+			while(len && sqrs[0].charCodeAt(--len) < 64); // skip trailing digits
+			to = sqrs[0].substring(len);
+			sqrs[0] = sqrs[0].substring(0, len);
+		}
+//document.getElementById('debug').innerHTML += 'n=' + n + ' sqrs=(' + sqrs[0] + ','+ sqrs[1] + ','+ sqrs[2] + ') to=' + to + ' promo=' + promo + '<br>';
+		var ki, from = sqrs[0], hits = 0, imps = 0, n = -1, ex = -1, ey = -1;
+		if(locust) ex = FileID(locust) + triple, ey = parseInt(locust.substring(1)) - rank1;
+		msp = 0;
+		var tx = FileID(to), ty = parseInt(to.substring(1)) - rank1;
+		var dx = -1, dy = -1; // disambiguators
+		if(from != '')
+		{
+			var c = FileID(from);
+			if(c >= 0) dx = c, from = from.substring(1);
+			if(from != '') dy = parseInt(from) - rank1;
+		}
+		if((dx < 0 || dy < 0) && !j) j = 1; // assume Pawn when from-square not fully defined
+		if(flagX >= 0)
+		{ // e.p. rights exist
+			var stepx = (5*(lastX - flagX) + 8) >> 4;
+			var stepy = (5*(lastY - flagY) + 8) >> 4;
+			ep = [hx1, hy1, hx2, hy2]; // latest move
+			ep[-2] = 2; ep[-5] = 0; ep[4] = flagX + stepx; ep[5] = flagY + stepy;
+		}
+		else ep = 0;
+//document.getElementById('debug').innerHTML += '('+dx+','+dy+')-('+tx+','+ty+') via ('+ex+','+ey+')<br>';
+		conta = (contageon != '');
+		GenAll(side); nodes++;
+		for(k=0; k<msp; k++)
+		{
+			var m = moveStack[k];
+			if(m[-2] >= 4 && m[1] == m[3] && (!autoGate || m[-2] == 6 || m[5] != 0 && m[5] != ranks-1)) { // castling
+				if(m[2] > m[0] && game[i] == 'O-O') { n = k; tx = m[2]; ty = m[3]; hits = 1; break; }
+				if(m[2] < m[0] && game[i] == 'O-O-O') { n = k; tx = m[2]; ty = m[3]; hits = 1; break; }
+				if(castle.length > 1) { // move specified a free castling
+					if(tx != m[2] || ty != m[3]) continue; // but not this one
+					n = k;
+					hits = 1;
+					break;
+				}
+			} else if(castle.length > 1) continue; // move contained ~: must be castling
+			if(tx != m[2] || ty != m[3]) continue; // wrong to-square
+			var piece = board[m[1]][m[0]] & 511;
+			if(j && ids[piece] != ids[j]) continue; // wrong piece
+			if(j && (ids[piece] != ids[j] || ids[1] == 'P' && j != piece && (j == 1 || piece == 1))) continue; // wrong piece
+//document.getElementById('debug').innerHTML += k + ' match<br>';
+//document.getElementById('debug').innerHTML += '('+m[0]+','+m[1]+')-('+m[2]+','+m[3]+') via ('+m[4]+','+m[5]+')<br>';
+			if(dx >= 0 && dx != m[0] || dy >= 0 && dy != m[1]) continue; // wrong from-square
+//document.getElementById('debug').innerHTML += 'promo=' + promo + ' piece=' + piece + ' ' + m[-1] + ' hit<br>';
+			if(promo) { // promotion was requested
+				if(promo == 1023) {
+					var ppiece = piece + promoOffset;
+					if(ppiece > nType) ppiece = promoOffset + 1;
+//document.getElementById('debug').innerHTML += 'p=' + piece + ' pp=' + ppiece + ' offs=' + promoOffset + ' ' + m[-1] + '<br>';
+					if(ppiece != (m[-1] & 511) && !weird) continue; // wrong promoted type
+				} else if(promo != (m[-1] & 511)) continue;			 // wrong promotion choice
+			} else { // could be implied
+				if(m[-1] && (m[-1] & 511) != piece)
+				{
+					imps++;
+					ki = k;
+					continue;
+				}
+			}
+//document.getElementById('debug').innerHTML += locust + ' ' + m[-2] + ' hit<br>';
+			if(locust) { // locust capture specified
+				if(m[-2] <= 2) continue; // but not made
+				if((ex != m[4] || ey != m[5]) && !(triple && m[-2] == 4)) continue; // or wrong
+			} else { // could be implied
+				if(m[-2] > 2)
+				{
+					imps++;
+					ki = k;
+					continue;
+				}
+			}
+			if(hits && moveStack[n][0] == m[0] && moveStack[n][1] == m[1]) continue; // duplicat
+			n = k; hits++; // full match
+//document.getElementById('debug').innerHTML += k + ' hit<br>';
+		}
+//document.getElementById('debug').innerHTML += 'hits='+hits+' imps='+imps + '<br>';
+		if(!hits) hits = imps, n = ki; // no full match, try implied side effect
+		if(hits > 1)
+		{
+			alert('ambiguous move ' + nr + '.	' + game[i]);
+			break;
+		}
+		if(!hits)
+		{ // no pseudo-legal match
+			if(j)
+			{ // piece type specified
+				var px = dx, py = dy;
+				for(var r=0; r<ranks; r++) for(f=0; f<files; f++) { // scan board for piece
+					if((px < 0 || px == f) && (py < 0 || py == r) && (board[r][f] & 511) == j) hits++, dx = f, dy = r;
+				}
+				if(hits > 1)
+				{
+					alert('ambiguous illegal move ' + nr + '. ' + game[i]);
+					break;
+				}
+			}
+		}
+		else
+		{
+			dx = moveStack[n][0];
+			dy = moveStack[n][1];
+			if(moveStack[n][-1] && !promo) promo = moveStack[n][-1];
+//document.getElementById('debug').innerHTML += 'promo=' + promo + '<br>';
+			j = moveStack[n][-2];
+			if(!autoGate || j < 4 || j == 6 || moveStack[n][5] != 0 && moveStack[n][5] != ranks-1)
+			{
+				k = (triple? 2 : 0);
+				if(autoGate && j == 6) k = 4;
+				if(j > 2) ex = moveStack[n][4+k] + triple, ey = moveStack[n][5+k];
+				if(j == 2 && moveStack[n][4] != undefined) ex = 100;
+			}
+		}
+		if(dx < 0 || dy < 0)
+		{
+			alert('impossible move ' + i + '.	' + game[i]);
+			break;
+		}
+		Move(dx, dy, tx, ty, ex, ey, promo & ~512);
+		side ^= 1024;
+	}
+}
+
+function PasteGame(dnr)
+{
+	setTimeout('ParseGame(' + dnr + ');', 1);
+}
+
+function Ordinal(n)//only called by MoveToText
+{
+	const d = n % 10;
+	if(d == 1) return n + 'st';
+	if(d == 2) return n + 'nd';
+	if(d == 3) return n + 'rd';
+	if(d >= 4) return n + 'th';//possible bug - what if n is a multiple of 10?
+}
+
+function MoveToText(piece, b, e)
+{
+	"use strict";//no changes needed
+	//console.log("MoveToText",piece,b,e);
+	var t = '', hop = 0, sep = '/// ';
+	for(var i=b; i<e; i++)
+	{
+		if(!(flags[i] & 1024))
+		{
+			hop = (flags[i] & 17);
+			continue;
+		}
+		var action;
+		if(flags[i] & 8)
+		{
+			var j = flags[i-1]>>25 & 1, s = (hSide >= 0 ? hSide : files-1) - j, p = (castleRank >= 0 ? board[castleRank][s] & 511 : 0);
+			p = (p ? names[p] : 'corner');
+			action = 'castles by stepping ' + yStep[i] + ' squares towards the ' + p;
+			t += action;
+			hop = 0;
+			continue;
+		}
+		var v = vector[i];
+		if(flags[i] & 1<<24) action = 'moves like it is of the same type as the last (own or opponent) piece that was moved (and was not itself an imitator)', v = 0;
+		else if(hop == 16 && !ranges[i-1] && v == 0x01)
+		{
+			v = vector[i-1];
+			action = (ranges[i] == 1 ? 'lands directly	behind' : 'jumps over') + ' the nearest piece';
+		}
+		else if(hop & 1)
+		{
+			var x = 0, y = 0, tail = 'must', tail2 = ' if that is empty';
+			for(var j=b; j<i; j++) x += xStep[j], y += yStep[j];
+			if(ranges[i] == 0 && x == 0)
+			{
+				var w = vector[b], dirs = ['???', 'orthogonally', 'diagonally' , '???'];
+				w = (w == 0x55 ? 1: w == 0xAA ? 2 : 3);
+				if(hop == 17 && v == 0x01) y += yStep[i], tail = 'can', tail2 = '';
+				action = (y > 1 ? 'jumps to the ' + Ordinal(y) + ' square ' : 'steps one square ') + dirs[w];
+				if(lastPiece == piece && lastLine == action) action = sep = '', tail = 'can'; else action += tail2;
+				if(v == 0x82) tail = ' and from there ' + tail + ' continue to slide ' + dirs[3-w] + ' outward';
+				if(v == 0x01) tail = ' and from there ' + tail + ' continue to slide in the same direction';
+				action += tail;
+				t += action;
+				hop = 0;
+				continue;
+			}
+		}
+		else if(yStep[i] == 1)
+		{
+			if(ranges[i] == 1) action = 'steps one square';
+			else if(ranges[i] == -1) action = 'slides up to halfway the board';
+			else action = 'slides' + (ranges[i] ? ' up to ' + ranges[i] + ' squares' : '');
+		}
+		else
+		{
+			var leap = '(' + yStep[i] + ',' + xStep[i] + ') leap';
+			if(xStep[i] && flags[i] & 128 && ranges[i] == 1) action = ' steps through any of the geometrically shortest paths to a destination a ' + leap + ' away';
+			else if(!xStep[i] && flags[i] & 128) action = 'slides to the ' + Ordinal(yStep[i]) + ' square';
+			else
+			{
+				action = (xStep[i] ? 'makes a ' + leap : 'jumps to the ' + Ordinal(yStep[i]) + ' square');
+				if(xStep[i] == 1 && yStep[i] == 2) action = "makes a knight's jump";
+				if(ranges[i] == 0) action = 'repeatedly ' + action + ' in the same direction';
+				if(ranges[i] > 1) action = action + ' up to ' + ranges[i] + ' times in the same direction';
+			}
+		}
+		if(xStep[i] == 0)
+		{
+			if(v == 0x55) action += ' orthogonally';
+			if(v == 0x01) action += ' straight ahead';
+			if(v == 0x10) action += ' straight backward';
+			if(v == 0x44) action += ' sideways';
+			if(v == 0x45) action += ' straight ahead or sideways';
+			if(v == 0x54) action += ' straight backward or sideways';
+			if(v == 0xAA) action += ' diagonally';
+			if(v == 0x82) action += ' diagonally forward';
+			if(v == 0x28) action += ' diagonally backward';
+			if(v == 0xFF) action += ' in all 8 directions';
+		}
+		var m = flags[i];
+		if((m & 3) == 2) action += ' for ' + (m & 4 ? '(e.p.?) ' : '') + 'capturing only';
+		if((m & 3) == 1) action += ' to an empty square';
+		t += action;
+		hop = 0;
+		if(flags[i] & 64) t += ' if it has not moved yet';
+	}
+	if(text[piece] == undefined) text[piece] = t; else text[piece] += sep + t;
+	lastLine = t;
+	lastPiece = piece;
+}
+
+function Descriptions(id, filter)
+{
+	"use strict";//no changes needed
+	//console.log("Descriptions",id,filter);
+	const p = document.getElementById(id);
+	if(!p) return;
+	var t = p.innerHTML;
+	if(!filter && t != '' && t != '\n') return;
+	t = Descrip2();
+	p.innerHTML = t;
+}
+
+function Descrip2(filter)//only called by Descriptions
+{
+	"use strict";//no issues spotted(not called yet)
+	console.log("Descrip2",filter);
+	var t = '';
+	for(var i=1; i<=nType; i++) if(!filter || PieceLine(i) != '') {
+		const h = text[i].split('/// ');
+		var last = h[0], oldj = 0;
+		for(var j=1; j<h.length; j++)
+		{
+			var a = last.substring(0, 5), b;
+			if(j != h.length - 1 && h[j].substring(0,5) != a && h[j+1].substring(0,5) == a) b = h[j+1], h[j+1] = h[j], h[j] = b;
+			if(a == 'steps' && h[j].substring(0,5) == a) h[j-1] += ', or ' + h[j].substring(17), h[j] = '';
+			if(a == ' step' && h[j].substring(0,5) == a) h[j-1] = h[j-1].substring(0, h[j-1].length-10) + ' or' + h[j].substring(71), h[j] = '';
+			if(a == 'castl' && h[j].substring(0,5) == a)
+			{
+				if(h[j].substring(h[j].length - 20) == last.substring(last.length - 20))
+				{
+					var n = h[j].indexOf('squares')
+					last = h[oldj] = h[oldj].substring(0, last.length - h[j].length + n) + ' or ' + h[j].substring(20), h[j] = '';
+				}
+				else last = h[oldj] += ' or ' + h[j].substring(8), h[j] = '';
+			}
+			if(a == 'jumps' && h[j].substring(0,5) == a && h[j].substring(16) == last.substring(16)) last = h[oldj] = h[oldj].substring(0,16) + ' or ' + h[j].substring(13), h[j] = '';
+			if(h[j]) last = h[j], oldj = j;
+		}
+		for(var j=1; j<h.length; j++)
+		{
+			if(h[j]) h[0] += (j == h.length - 1 ? ', or ' : ', ') + h[j];
+		}
+		t += '<tr><td width="35"><img src="' + MakeImage(i, whitePrefix) + '"></td><td>' + names[i] + '</td><td>' + h[0] + '</td></tr>\n';
+	}
+	if(filter) t = '<table border="1" width="800">\n' + t + '</table>\n';
+	return t;
+}
+
+function Plies(n)//only called by the + and - ply buttons
+{
+	"use strict";//no changes needed
+	//console.log("Plies",n);
+	depth += n;
+	if(depth > 8) depth = 8;
+	if(depth < 4) depth = 4;
+	document.getElementById("ply" + active).innerHTML = (depth*0.5).toFixed(1) + ' ply';
+}
+
+function DisplayMV(nr)//only called by whatever uses tab in BetzaCompile (via ph2)
+{
+	"use strict";//no changes needed
+	console.log("DisplayMV",nr);
+	var t, p = document.getElementById('moval' + nr);
+	var moval = (p.innerHTML == 'move');
+	GaugeValues();
+	RefineValues();
+	p.innerHTML = (moval ? 'estimated value' : 'move');
+	for(var i=1; i<=nType; i++)
+	{
+		if(moval) t = pieceValue[i] /* + ' ' + baseValue[i] */ + (royalness[i] ? ' (' + royalness[i].toString(16) + ')' : '')
+		else t = moves[i]; 
+		p = document.getElementById('m' + nr + 'x' + i);//`m${nr}x${i}`
+		if(p) p.innerHTML = t;
+	}
+}
+
+function ShowMoves(p)//only called by DefinePiece. (When a piece is clicked to show the moves on the board)
+{
+	"use strict";//no issues spotted(not called yet)
+	console.log("ShowMoves",p);
+	ShowMoves2(0, p, -2, 0);
+}
+
+function ShowMoves2(dnr, p, x, y)
+{
+	"use strict";//no changes needed
+	//console.log("ShowMoves2",dnr,p,x,y);
+	const q = p;
+	var msg;
+	SwitchDiag(dnr);
+	if(!touched) oldMessage = document.getElementById('message' + dnr).innerHTML;
+	if(touched == p && promoOffset && p <= maxPromote)
+	{
+		p += promoOffset;
+		if(p > nType) p = promoOffset + 1;
+		msg = 'Moves of promoted ' + names[q] + ' (' + names[p] + '):';
+	}
+	else msg = 'Moves of ' + names[p & 511] + (p & 512 ? ' (non-virgin)' : '') + ':';
+	if(p == 0 || touched == p || touched == p + promoOffset || touched == promoOffset + 1 && p + promoOffset > nType && q == lastReq)
+	{
+		touched = emulateHover = 0;
+		ShowMessage(oldMessage);
+		Display(); // back to game
+		if(xx >= 0) GenMoves(hx1, hy1, (ex >= 0 ? 2 : 1)); // re-apply highlights
+		return;
+	}
+	touched = p;
+	lastReq = q;
+	emulateHover = 1;
+	for(var i=0; i<ranks; i++)
+	{
+		if(i >= spareInit)
+		{
+			spare[i] = new Array();
+			spareInit = i + 1;
+		}
+		for(var j=0; j<files; j++)
+		{
+			spare[i][j] = board[i][j] & ~(x == -2 ? 3<<28 : 0);
+			board[i][j] = 0;
+		}
+	}
+	var sav1 = hx1, sav2 = hx2, savDark = dark, savLight = light, savOdd = oddShade, savEx = ex, savEy = ey, locust=0;
+	board[midY][midX] = p;
+	hx1 = -1;
+	hx2 = -1;
+	light = '#FFFFFF';
+	dark = oddShade = (borders ? '#FFFFFF' : '#E0E0E0');
+	if(x >= 0) board[y][x] = 1025, ex = x, ey = y, locust = spare[y][x] >> 29 & 1;
+	Display();
+	dark = savDark;
+	light = savLight;
+	oddShade = savOdd;
+	GenMoves(midX, midY, 1+16 + locust);
+	if(locust) touched = 0, Highlight(x, y, "#00FFFF"), touched = p;
+	ex = savEx, ey = savEy;
+	ShowMessage(msg + (promoOffset && p <= maxPromote ? '		<span style="background:#80FF80">Click again to show promoted piece</span>' : ''));
+	for(var i=0; i<ranks; i++)
+	{
+		for(var j=0; j<files; j++) board[i][j] = spare[i][j];
+	}
+	hx1 = sav1;
+	hx2 = sav2;
+	var desc = document.getElementById('m' + dnr + 'x0');
+	p &= 511;
+	if(promoOffset && p <= maxPromote && desc)
+	{
+		var prom = p + promoOffset;
+		if(prom > nType) prom = promoOffset + 1;
+		document.getElementById('mp').innerHTML = 'promotes to';
+		desc.innerHTML = names[prom];
+	}
+}
+
+function ShowAll(dnr)//only called by clicking print version, set so by BetzaCompile
+{
+	"use strict";//one const needed
+	//console.log("ShowAll",dnr);
+	const b = document.getElementById("board" + dnr);
+	const p = document.getElementById("printversion" + dnr);
+	var i, t = '';
+	if(p == null) return;
+	SwitchDiag(dnr);
+	if(printable)
+	{
+		printable = 0;
+		p.innerHTML = '';
+		return;
+	}
+	for(i=1; i<=nType; i++)
+	{ // collect move diagrams of all pieces
+		var msg = (promoOffset && i <= maxPromote ? ' (promotes to ' + names[i + promoOffset > nType ? promoOffset+1 : i+promoOffset] + ')' : '');
+		msg = '<p>moves of ' + names[i] + msg + ':</p>';
+		ShowMoves2(active, i, -2, 0);
+		const table = b.innerHTML;//added const for sake of strict mode
+		t += msg + '<table cellpadding="0" style="border-collapse:collapse;">' + table + '</table>';
+	}
+	ShowMoves2(active, 0, -2, 0);
+	p.innerHTML = t;
+	printable = 1;
+}
+
+function DefinePiece(n)//TableRow sets this to onclick; seems to be leftovers from MS test applet.
+{
+	"use strict";//no changes needed
+	//console.log("DefinePiece",n);
+	if(n == 0)
+	{
+		if(touched) ShowMoves(Promoted(touched));
+		return;
+	}
+	if(n > 0) lastPiece = n;
+	var entry, v, k = 0;
+	entry = document.getElementById('definition')
+	if(entry) { v = entry.value; entry.value = ''; if(v != '') moves[lastPiece] = v, k++, gauged = -1; }
+	entry = document.getElementById('newname')
+	if(entry) { v = entry.value; entry.value = ''; if(v != '') names[lastPiece] = v, k++; }
+	entry = document.getElementById('newid')
+	if(entry) { v = entry.value; entry.value = ''; if(v != '') ids[lastPiece] = v, k++; }
+	if(!k) return 0;
+	BError('');
+	text = [];
+	BetzaCompile();
+	document.getElementById('m' + active + 'x' + lastPiece).style.background = "#80FF80";
+	return 1;
+}
+
+function OpenDiv(id)//CreateAnchors sets this to two onclicks
+{
+	"use strict";//one const needed
+	//console.log("OpenDiv",id);
+	const visible = document.getElementById(id).style.display;//added const for sake of strict mode
+	document.getElementById(id).style.display = (visible == "none" ? "inherit" : "none");
+	return visible != 'none';
+}

@@ -1,0 +1,89 @@
+<html>
+<head>
+<title>Stream incoming events - Lichess API
+</title>
+<script>
+function makeo(ClBt)
+{
+	ClBt.disabled = true;
+	const erD = document.getElementById("er");
+	erD.innerText = "";
+	const tokInp = document.getElementById("OAT").value.trim();
+	if(tokInp.length===0)
+	{
+		erD.innerText = "bot:play token is required";
+		ClBt.disabled = false;
+		return;
+	}
+	const stopSign = streamStopper.signal;
+	const sSite = document.getElementById("selSite").value;
+	const APIendPoint = `https://${sSite}.org/api/stream/event`;
+	const tc = "Bearer "+tokInp;
+	const sv = {'method':'GET','headers':{'Authorization':tc},'signal':stopSign};
+	const stts = document.getElementById("EventSTTS");
+	const hdrs = document.getElementById("EventHDRS");
+	const svar = document.getElementById("EventSvar");
+	stts.innerHTML = "Requesting stream...";
+	StreamFetch(APIendPoint,sv,stts,hdrs,svar);
+}
+async function StreamFetch(EndPoint,opts,Dstts,Dhdrs,Dsvar)
+{
+	const response = await fetch(EndPoint,opts);
+	Dstts.innerText = "Response code = "+response.status;
+	for(let [k,v] of response.headers){lister(`${k} : ${v}`,Dhdrs,'li');}
+	const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+	while(true)
+	{
+		const {value,done} = await reader.read();
+		if(done){break;}
+		const rl = value.trim();
+		if(rl.length>0)
+		{
+			Dsvar.prepend(document.createTextNode(value));
+			const obc = JSON.parse(rl);
+			console.log(obc);
+		}
+		else
+		{
+			console.log("Ping "+value.length);
+		}
+	}
+}
+function lister(listedText, PN, ElType)
+{
+	const listEntry = document.createElement(ElType);
+	const entryText = document.createTextNode(listedText);
+	listEntry.appendChild(entryText);
+	PN.appendChild(listEntry);
+}
+
+const streamStopper = new AbortController();
+function stopTheStream()
+{
+	streamStopper.abort();
+}
+</script>
+<style>
+input,select
+{
+	margin-top: 1px;
+	margin-bottom: 1px;
+}
+</style>
+</head>
+<body>
+Site = <select id="selSite">
+<option value="lichess" selected>lichess</option>
+<option value="lishogi">lishogi</option>
+<option value="lidraughts">lidraughts</option>
+<option value="playstrategy" disabled>playstrategy</option>
+</select><br>
+OAuth token = <input type=password id="OAT" size=30> (challenge:read, bot:play, board:play)<br>
+<input type=button value="Stream incoming events" onClick=makeo(this)>
+<pre id="er"></pre>
+<hr>
+<div id="EventSTTS"></div>
+<ul id="EventHDRS"></ul>
+<pre id="EventSvar"></pre>
+</body>
+</html>
