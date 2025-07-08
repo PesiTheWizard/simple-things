@@ -1,0 +1,630 @@
+"use strict";//no changes needed or performed
+function Nz()
+{
+	var a,b,c;
+	b=$doc.compatMode;
+	a=ju(Zy,bJ,1,[DL]);
+	for(c=0;c<a.length;c++)
+	{
+		if(MF(a[c],b)){return}
+	}
+	a.length==1&&MF(DL,a[0])&&MF('BackCompat',b)?"GWT no longer supports Quirks Mode (document.compatMode=' BackCompat').<br>Make sure your application's host HTML page has a Standards Mode (document.compatMode=' CSS1Compat') doctype,<br>e.g. by using &lt;!doctype html&gt; at the start of your application's HTML page.<br><br>To continue using this unsupported rendering mode and risk layout problems, suppress this message by adding<br>the following line to your*.gwt.xml module file:<br>&nbsp;&nbsp;&lt;extend-configuration-property name=\"document.compatMode\" value=\""+b+'"/&gt;':"Your *.gwt.xml module configuration prohibits the use of the current doucment rendering mode (document.compatMode=' "+b+"').<br>Modify your application's host HTML page doctype, or update your custom 'document.compatMode' configuration property settings."
+}
+function wl(a)
+{
+	var b,c,d,e,f,g,i,j,k,n,o;
+	i=0;
+	c=fc(a);
+	for(k=0;k<c.c;k++)
+	{
+		d=(vH(k,c.c),su(c.b[k],4)).c;
+		MF(d.X(),GK)?(i+=1000000):MF(d.X(),tL)?(i+=95):MF(d.X(),pL)?(i+=85):MF(d.X(),qL)?(i+=55):MF(d.X(),uL)?(i+=45):MF(d.X(),rL)?(i+=25):MF(d.X(),sL)?(i+=35):MF(d.X(),UK)&&(i+=15)
+	}
+	f=ec(a);
+	for(n=0;n<f.c;n++)
+	{
+		d=(vH(n,f.c),su(f.b[n],4)).c;
+		MF(d.X(),GK)?(i-=1000000):MF(d.X(),tL)?(i-=95):MF(d.X(),pL)?(i-=85):MF(d.X(),qL)?(i-=55):MF(d.X(),uL)?(i-=45):MF(d.X(),rL)?(i-=25):MF(d.X(),sL)?(i-=35):MF(d.X(),UK)&&(i-=15)
+	}
+	b=hc(c,a);
+	for(o=0;o<b.c;o++)
+	{
+		g=(vH(o,b.c),su(b.b[o],4));
+		d=a.b[g.f][g.i];
+		!d?++i:d.c?d.c&&MF(d.X(),tL)?(i+=95):d.c&&MF(d.X(),pL)?(i+=85):d.c&&MF(d.X(),qL)?(i+=55):d.c&&MF(d.X(),uL)?(i+=45):d.c&&MF(d.X(),rL)?(i+=25):d.c&&MF(d.X(),sL)?(i+=35):(i+=3):(i+=2)
+	}
+	e=hc(f,a);
+	for(j=0;j<e.c;j++)
+	{
+		g=(vH(j,e.c),su(e.b[j],4));
+		d=a.b[g.f][g.i];
+		!d?--i:d.c?(i-=2):!d.c&&MF(d.X(),GK)?(i-=1000):!d.c&&MF(d.X(),tL)?(i-=95):!d.c&&MF(d.X(),pL)?(i-=85):!d.c&&MF(d.X(),qL)?(i-=55):!d.c&&MF(d.X(),uL)?(i-=45):!d.c&&MF(d.X(),rL)?(i-=25):!d.c&&MF(d.X(),sL)?(i-=35):(i-=3)
+	}
+	return i
+}
+function ic(a)
+{
+	var b,c,d,e,f,g,i,j,k,n,o,p,q;
+	d=false;
+	if((wb(),wb(),ib).b.c>0)
+	{
+		j=ib.b;
+		k=new hI;
+		for(b=0;b<j.c;b++)
+		{
+			for(n=0;n<jb.b.length;n++)
+			{
+				for(q=0;q<jb.b[0].length;q++)
+				{
+					if((vH(b,j.c),su(j.b[b],2)).Z(n,q,jb))
+					{
+						g=new Ac;
+						g.d=(vH(b,j.c),su(j.b[b],2)).X();
+						g.c=(vH(b,j.c),su(j.b[b],2));
+						g.b=true;
+						g.f=n;
+						g.i=q;
+						ku(k.b,k.c++,g)
+					}
+				}
+			}
+		}
+		if(k.c>0)
+		{
+			i=zu(BF()*k.c);
+			g=(vH(i,k.c),su(k.b[i],4));
+			yb(g.c.X(),g.f,g.i);
+			d=true
+		}
+	}
+	if(!d)
+	{
+		i=-1;
+		for(o=0;o<2;o++)
+		{
+			i=zu(BF()*a.c);
+			if(MF((vH(i,a.c),su(a.b[i],4)).c.X(),UK))
+				break
+		}
+		k=new hI;
+		for(p=0;p<jb.b.length;p++)
+		{
+			for(q=0;q<jb.b[0].length;q++)
+			{
+				if((vH(i,a.c),su(a.b[i],4)).c.$(p,q,jb))
+				{
+					g=new Ac;
+					g.d=(vH(i,a.c),su(a.b[i],4)).d;
+					g.e=(vH(i,a.c),su(a.b[i],4)).e;
+					g.g=(vH(i,a.c),su(a.b[i],4)).g;
+					g.f=p;
+					g.i=q;
+					ku(k.b,k.c++,g)
+				}
+			}
+		}
+		if(k.c==0)
+		{
+			for(f=0;f<a.c;f++)
+			{
+				for(n=0;n<jb.b.length;n++)
+				{
+					for(q=0;q<jb.b[0].length;q++)
+					{
+						if((vH(f,a.c),su(a.b[f],4)).c.$(n,q,jb))
+						{
+							g=new Ac;
+							g.d=(vH(f,a.c),su(a.b[f],4)).d;
+							g.e=(vH(f,a.c),su(a.b[f],4)).e;
+							g.g=(vH(f,a.c),su(a.b[f],4)).g;
+							g.f=n;
+							g.i=q;
+							ku(k.b,k.c++,g)
+						}
+					}
+				}
+			}
+		}
+		e=zu(BF()*k.c);
+		c=(vH(e,k.c),su(k.b[e],4));
+		zb(c.e,c.g,c.f,c.i,true)
+	}
+}
+function YA(a,b)
+{
+	var c=(a.__eventBits||0)^b;
+	a.__eventBits=b;
+	if(!c)return;
+	c&1&&(a.onclick=b&1?PA:null);
+	c&2&&(a.ondblclick=b&2?PA:null);
+	c&4&&(a.onmousedown=b&4?PA:null);
+	c&8&&(a.onmouseup=b&8?PA:null);
+	c&16&&(a.onmouseover=b&16?PA:null);
+	c&32&&(a.onmouseout=b&32?PA:null);
+	c&64&&(a.onmousemove=b&64?PA:null);
+	c&128&&(a.onkeydown=b&128?PA:null);
+	c&256&&(a.onkeypress=b&256?PA:null);
+	c&512&&(a.onkeyup=b&512?PA:null);
+	c&1024&&(a.onchange=b&1024?PA:null);
+	c&2048&&(a.onfocus=b&2048?PA:null);
+	c&4096&&(a.onblur=b&4096?PA:null);
+	c&8192&&(a.onlosecapture=b&8192?PA:null);
+	c&16384&&(a.onscroll=b&16384?PA:null);
+	c&32768&&(a.onload=b&32768?QA:null);
+	c&65536&&(a.onerror=b&65536?PA:null);
+	c&131072&&(a.onmousewheel=b&131072?PA:null);
+	c&262144&&(a.oncontextmenu=b&262144?PA:null);
+	c&524288&&(a.onpaste=b&524288?PA:null);
+	c&1048576&&(a.ontouchstart=b&1048576?PA:null);
+	c&2097152&&(a.ontouchmove=b&2097152?PA:null);
+	c&4194304&&(a.ontouchend=b&4194304?PA:null);
+	c&8388608&&(a.ontouchcancel=b&8388608?PA:null);
+	c&16777216&&(a.ongesturestart=b&16777216?PA:null);
+	c&33554432&&(a.ongesturechange=b&33554432?PA:null);
+	c&67108864&&(a.ongestureend=b&67108864?PA:null)
+}
+function zb(a,b,c,d,e)
+{
+	wb();
+	if(!lb)
+	{
+		if(jb.b[a][b].$(c,d,jb))
+		{
+			if(nb)
+			{
+				if(jb.b[c][d])
+				{
+					jb.b[c][d].d=false;
+					if(MF(jb.b[c][d].X(),GK))
+					{
+						Mj(_g,'Winner',"You've won! Congradulations!");
+						lb=true
+					}
+					else
+					{
+						jb.b[c][d].c=!jb.b[c][d].c;
+						_H(mb.b,jb.b[c][d])
+					}
+				}
+				if(!jb.b[a][b].d&&MF(jb.b[a][b].Y(),HK)&&d==0)
+				{
+					jb.b[a][b].d=true;
+					lb||Mj(_g,IK,"You're Pawn is now promoted.");
+					Ab(a,b,c,0)
+				}
+				else if(!jb.b[a][b].d&&MF(jb.b[a][b].Y(),JK)&&d==0)
+				{
+					jb.b[a][b].d=true;
+					lb||Mj(_g,IK,"You're Lance is now promoted.");
+					Ab(a,b,c,0)
+				}
+				else if(!jb.b[a][b].d&&MF(jb.b[a][b].Y(),KK)&&d<2)
+				{
+					jb.b[a][b].d=true;
+					lb||Mj(_g,IK,"You're Knight is now promoted.");
+					Ab(a,b,c,d)
+				}
+				else !jb.b[a][b].d&&d<3|b<3&&jb.b[a][b].b&&!lb?Bj(_g,new Xb(a,b,c,d)):Ab(a,b,c,d)
+			}
+			else
+			{
+				if(jb.b[c][d])
+				{
+					jb.b[c][d].d=false;
+					if(MF(jb.b[c][d].X(),GK))
+					{
+						bh(vb);
+						Mj(_g,'Game Over','Sorry. You have lost.');
+						lb=true
+					}
+					else{jb.b[c][d].c=!jb.b[c][d].c;_H(ib.b,jb.b[c][d])}
+				}
+				!jb.b[a][b].d&&MF(jb.b[a][b].Y(),LK)&&d==8?(jb.b[a][b].d=true):!jb.b[a][b].d&&MF(jb.b[a][b].Y(),MK)&&d==8?(jb.b[a][b].d=true):!jb.b[a][b].d&&MF(jb.b[a][b].Y(),NK)&&d>6?(jb.b[a][b].d=true):!jb.b[a][b].d&&d>5|b>5&&jb.b[a][b].b&&e&&(jb.b[a][b].d=true);
+				hb[0]=c;
+				hb[1]=d;
+				Ab(a,b,c,d)
+			}
+		}
+	}
+}
+function sm(a,b)
+{
+	var c,d,e,f,g,i,j,k,n,o,p,q,r,s,t,u,v;
+	xn(b,(Ez(),rm.R),0,0);
+	f=0;
+	e=0;
+	g=0;
+	i=0;
+	c=0;
+	d=0;
+	j=0;
+	p=0;
+	o=0;
+	q=0;
+	r=0;
+	k=0;
+	n=0;
+	s=0;
+	for(v=0;v<a.b.b.c;v++)
+	{
+		t=cI(a.b.b,v);
+		uu(t,9)?++f:uu(t,8)?++e:uu(t,10)?++g:uu(t,11)?++i:uu(t,5)?++c:uu(t,6)?++d:uu(t,12)&&++j
+	}
+	for(u=0;u<a.c.b.c;u++)
+	{
+		t=cI(a.c.b,u);
+		uu(t,9)?++p:uu(t,8)?++o:uu(t,10)?++q:uu(t,11)?++r:uu(t,5)?++k:uu(t,6)?++n:uu(t,12)&&++s
+	}
+	un(b);
+	An(b,XK);
+	b.font='bold 12px san-serif';
+	f>0&&zn(b,OK+f,15,27);
+	g>0&&zn(b,OK+g,53,27);
+	e>0&&zn(b,OK+e,90,27);
+	j>0&&zn(b,OK+j,34,87);
+	d>0&&zn(b,OK+d,71,87);
+	i>0&&zn(b,OK+i,34,147);
+	c>0&&zn(b,OK+c,71,147);
+	p>0&&zn(b,OK+p,15,445);
+	q>0&&zn(b,OK+q,53,445);
+	o>0&&zn(b,OK+o,90,445);
+	s>0&&zn(b,OK+s,34,385);
+	n>0&&zn(b,OK+n,71,385);
+	r>0&&zn(b,OK+r,34,325);
+	k>0&&zn(b,OK+k,71,325);
+	vn(b);
+	wb();
+	if(nb&&pb)
+	{
+		un(b);
+		Cn(b,vL);
+		Bn(b,2);
+		MF(qb,tL)?En(b,32,267,32,45):MF(qb,pL)?En(b,69,267,32,45):MF(qb,uL)?En(b,32,327,32,45):MF(qb,qL)?En(b,69,327,32,45):MF(qb,sL)?En(b,13,387,32,45):MF(qb,UK)?En(b,51,387,32,45):MF(qb,rL)&&En(b,89,387,32,45);
+		vn(b);
+		Dn(b)
+	}
+	if(nb)
+	{
+		un(b);
+		An(b,xL);
+		tn(b,120,444,7,0,6.283185307179586,true);
+		vn(b);
+		yn(b);
+		un(b);
+		An(b,vL);
+		tn(b,120,16,7,0,6.283185307179586,true);
+		vn(b);
+		yn(b)
+	}
+	else
+	{
+		un(b);
+		An(b,vL);
+		tn(b,120,444,7,0,6.283185307179586,true);
+		vn(b);
+		yn(b);
+		un(b);
+		An(b,xL);
+		tn(b,120,16,7,0,6.283185307179586,true);
+		vn(b);
+		yn(b)
+	}
+}
+function ol(a,b,c)
+{
+	var d,e,f,g,i,j,k,n,o,p,q,r,s,t,u,v;
+	p=fJ;
+	e=fc(a);
+	for(r=0;r<e.c;r++)
+	{
+		g=(vH(r,e.c),su(e.b[r],4)).c;
+		MF(g.X(),GK)?(p=ez(p,gJ)):MF(g.X(),tL)?(p=ez(p,hJ)):MF(g.X(),pL)?(p=ez(p,iJ)):MF(g.X(),qL)?(p=ez(p,jJ)):MF(g.X(),uL)?(p=ez(p,kJ)):MF(g.X(),rL)?(p=ez(p,lJ)):MF(g.X(),sL)?(p=ez(p,mJ)):MF(g.X(),UK)&&(p=ez(p,nJ))
+	}
+	k=ec(a);
+	for(s=0;s<k.c;s++)
+	{
+		g=(vH(s,k.c),su(k.b[s],4)).c;
+		MF(g.X(),GK)?(p=iz(p,gJ)):MF(g.X(),tL)?(p=iz(p,hJ)):MF(g.X(),pL)?(p=iz(p,iJ)):MF(g.X(),qL)?(p=iz(p,jJ)):MF(g.X(),uL)?(p=iz(p,kJ)):MF(g.X(),rL)?(p=iz(p,lJ)):MF(g.X(),sL)?(p=iz(p,mJ)):MF(g.X(),UK)&&(p=iz(p,nJ))
+	}
+	f=b.b;
+	for(t=0;t<f.c;t++)
+	{
+		g=(vH(t,f.c),su(f.b[t],2));
+		MF(g.X(),GK)?(p=ez(p,gJ)):MF(g.X(),tL)?(p=ez(p,oJ)):MF(g.X(),pL)?(p=ez(p,pJ)):MF(g.X(),qL)?(p=ez(p,qJ)):MF(g.X(),uL)?(p=ez(p,rJ)):MF(g.X(),rL)?(p=ez(p,sJ)):MF(g.X(),sL)?(p=ez(p,tJ)):MF(g.X(),UK)&&(p=ez(p,uJ))
+	}
+	n=c.b;
+	for(u=0;u<n.c;u++)
+	{
+		g=(vH(u,n.c),su(n.b[u],2));
+		MF(g.X(),GK)?(p=iz(p,gJ)):MF(g.X(),tL)?(p=iz(p,hJ)):MF(g.X(),pL)?(p=iz(p,iJ)):MF(g.X(),qL)?(p=iz(p,jJ)):MF(g.X(),uL)?(p=iz(p,kJ)):MF(g.X(),rL)?(p=iz(p,lJ)):MF(g.X(),sL)?(p=iz(p,mJ)):MF(g.X(),UK)&&(p=iz(p,nJ))
+	}
+	d=hc(e,a);
+	for(v=0;v<d.c;v++)
+	{
+		o=(vH(v,d.c),su(d.b[v],4));
+		i=a.b[o.f][o.i];
+		!i?(p=ez(p,vJ)):i.c?i.c&&MF(i.X(),GK)?(p=ez(p,wJ)):i.c&&MF(i.X(),tL)?(p=ez(p,xJ)):i.c&&MF(i.X(),pL)?(p=ez(p,yJ)):i.c&&MF(i.X(),qL)?(p=ez(p,zJ)):i.c&&MF(i.X(),uL)?(p=ez(p,AJ)):i.c&&MF(i.X(),rL)?(p=ez(p,BJ)):i.c&&MF(i.X(),sL)?(p=ez(p,CJ)):(p=ez(p,DJ)):(p=ez(p,DJ))
+	}
+	j=hc(k,a);
+	for(q=0;q<j.c;q++)
+	{
+		o=(vH(q,j.c),su(j.b[q],4));
+		i=a.b[o.f][o.i];
+		!i?(p=iz(p,vJ)):i.c?(p=iz(p,DJ)):!i.c&&MF(i.X(),GK)?(p=iz(p,EJ)):!i.c&&MF(i.X(),tL)?(p=iz(p,FJ)):!i.c&&MF(i.X(),pL)?(p=iz(p,GJ)):!i.c&&MF(i.X(),qL)?(p=iz(p,HJ)):!i.c&&MF(i.X(),uL)?(p=iz(p,IJ)):!i.c&&MF(i.X(),rL)?(p=iz(p,JJ)):!i.c&&MF(i.X(),sL)?(p=iz(p,KJ)):(p=iz(p,DJ))
+	}
+	return p
+}
+function sl(a,b,c)
+{
+	var d,e,f,g,i,j,k,n,o,p,q,r,s,t,u,v;
+	p=fJ;
+	e=fc(a);
+	for(r=0;r<e.c;r++)
+	{
+		g=(vH(r,e.c),su(e.b[r],4)).c;
+		MF(g.X(),GK)?(p=ez(p,gJ)):MF(g.X(),tL)?(p=ez(p,hJ)):MF(g.X(),pL)?(p=ez(p,iJ)):MF(g.X(),qL)?(p=ez(p,jJ)):MF(g.X(),uL)?(p=ez(p,kJ)):MF(g.X(),rL)?(p=ez(p,lJ)):MF(g.X(),sL)?(p=ez(p,mJ)):MF(g.X(),UK)&&(p=ez(p,nJ))
+	}
+	k=ec(a);
+	for(s=0;s<k.c;s++)
+	{
+		g=(vH(s,k.c),su(k.b[s],4)).c;
+		MF(g.X(),GK)?(p=iz(p,gJ)):MF(g.X(),tL)?(p=iz(p,hJ)):MF(g.X(),pL)?(p=iz(p,iJ)):MF(g.X(),qL)?(p=iz(p,jJ)):MF(g.X(),uL)?(p=iz(p,kJ)):MF(g.X(),rL)?(p=iz(p,lJ)):MF(g.X(),sL)?(p=iz(p,mJ)):MF(g.X(),UK)&&(p=iz(p,nJ))
+	}
+	f=b.b;
+	for(t=0;t<f.c;t++)
+	{
+		g=(vH(t,f.c),su(f.b[t],2));
+		MF(g.X(),GK)?(p=ez(p,gJ)):MF(g.X(),tL)?(p=ez(p,oJ)):MF(g.X(),pL)?(p=ez(p,pJ)):MF(g.X(),qL)?(p=ez(p,qJ)):MF(g.X(),uL)?(p=ez(p,rJ)):MF(g.X(),rL)?(p=ez(p,sJ)):MF(g.X(),sL)?(p=ez(p,tJ)):MF(g.X(),UK)&&(p=ez(p,uJ))
+	}
+	n=c.b;
+	for(u=0;u<n.c;u++)
+	{
+		g=(vH(u,n.c),su(n.b[u],2));
+		MF(g.X(),GK)?(p=iz(p,gJ)):MF(g.X(),tL)?(p=iz(p,hJ)):MF(g.X(),pL)?(p=iz(p,iJ)):MF(g.X(),qL)?(p=iz(p,jJ)):MF(g.X(),uL)?(p=iz(p,kJ)):MF(g.X(),rL)?(p=iz(p,lJ)):MF(g.X(),sL)?(p=iz(p,mJ)):MF(g.X(),UK)&&(p=iz(p,nJ))
+	}
+	d=hc(e,a);
+	for(v=0;v<d.c;v++)
+	{
+		o=(vH(v,d.c),su(d.b[v],4));
+		i=a.b[o.f][o.i];
+		!i?(p=ez(p,vJ)):i.c?i.c&&MF(i.X(),GK)?(p=ez(p,wJ)):i.c&&MF(i.X(),tL)?(p=ez(p,xJ)):i.c&&MF(i.X(),pL)?(p=ez(p,yJ)):i.c&&MF(i.X(),qL)?(p=ez(p,zJ)):i.c&&MF(i.X(),uL)?(p=ez(p,AJ)):i.c&&MF(i.X(),rL)?(p=ez(p,BJ)):i.c&&MF(i.X(),sL)?(p=ez(p,CJ)):(p=ez(p,DJ)):(p=ez(p,DJ))
+	}
+	j=hc(k,a);
+	for(q=0;q<j.c;q++)
+	{
+		o=(vH(q,j.c),su(j.b[q],4));
+		i=a.b[o.f][o.i];
+		!i?(p=iz(p,vJ)):i.c?(p=iz(p,DJ)):!i.c&&MF(i.X(),GK)?(p=iz(p,EJ)):!i.c&&MF(i.X(),tL)?(p=iz(p,FJ)):!i.c&&MF(i.X(),pL)?(p=iz(p,GJ)):!i.c&&MF(i.X(),qL)?(p=iz(p,HJ)):!i.c&&MF(i.X(),uL)?(p=iz(p,IJ)):!i.c&&MF(i.X(),rL)?(p=iz(p,JJ)):!i.c&&MF(i.X(),sL)?(p=iz(p,KJ)):(p=iz(p,DJ))
+	}
+	return p
+}
+function Al(a,b,c)
+{
+	var d,e,f,g,i,j,k,n,o,p,q,r,s,t,u,v;
+	p=fJ;
+	e=fc(a);
+	for(r=0;r<e.c;r++)
+	{
+		g=(vH(r,e.c),su(e.b[r],4)).c;
+		MF(g.X(),GK)?(p=ez(p,gJ)):MF(g.X(),tL)?(p=ez(p,hJ)):MF(g.X(),pL)?(p=ez(p,iJ)):MF(g.X(),qL)?(p=ez(p,jJ)):MF(g.X(),uL)?(p=ez(p,kJ)):MF(g.X(),rL)?(p=ez(p,lJ)):MF(g.X(),sL)?(p=ez(p,mJ)):MF(g.X(),UK)&&(p=ez(p,nJ))
+	}
+	k=ec(a);
+	for(s=0;s<k.c;s++)
+	{
+		g=(vH(s,k.c),su(k.b[s],4)).c;
+		MF(g.X(),GK)?(p=iz(p,gJ)):MF(g.X(),tL)?(p=iz(p,hJ)):MF(g.X(),pL)?(p=iz(p,iJ)):MF(g.X(),qL)?(p=iz(p,jJ)):MF(g.X(),uL)?(p=iz(p,kJ)):MF(g.X(),rL)?(p=iz(p,lJ)):MF(g.X(),sL)?(p=iz(p,mJ)):MF(g.X(),UK)&&(p=iz(p,nJ))
+	}
+	f=b.b;
+	for(t=0;t<f.c;t++)
+	{
+		g=(vH(t,f.c),su(f.b[t],2));
+		MF(g.X(),GK)?(p=ez(p,gJ)):MF(g.X(),tL)?(p=ez(p,oJ)):MF(g.X(),pL)?(p=ez(p,pJ)):MF(g.X(),qL)?(p=ez(p,qJ)):MF(g.X(),uL)?(p=ez(p,rJ)):MF(g.X(),rL)?(p=ez(p,sJ)):MF(g.X(),sL)?(p=ez(p,tJ)):MF(g.X(),UK)&&(p=ez(p,uJ))
+	}
+	n=c.b;
+	for(u=0;u<n.c;u++)
+	{
+		g=(vH(u,n.c),su(n.b[u],2));
+		MF(g.X(),GK)?(p=iz(p,gJ)):MF(g.X(),tL)?(p=iz(p,hJ)):MF(g.X(),pL)?(p=iz(p,iJ)):MF(g.X(),qL)?(p=iz(p,jJ)):MF(g.X(),uL)?(p=iz(p,kJ)):MF(g.X(),rL)?(p=iz(p,lJ)):MF(g.X(),sL)?(p=iz(p,mJ)):MF(g.X(),UK)&&(p=iz(p,nJ))
+	}
+	d=hc(e,a);
+	for(v=0;v<d.c;v++)
+	{
+		o=(vH(v,d.c),su(d.b[v],4));
+		i=a.b[o.f][o.i];
+		!i?(p=ez(p,vJ)):i.c?i.c&&MF(i.X(),GK)?(p=ez(p,wJ)):i.c&&MF(i.X(),tL)?(p=ez(p,xJ)):i.c&&MF(i.X(),pL)?(p=ez(p,yJ)):i.c&&MF(i.X(),qL)?(p=ez(p,zJ)):i.c&&MF(i.X(),uL)?(p=ez(p,AJ)):i.c&&MF(i.X(),rL)?(p=ez(p,BJ)):i.c&&MF(i.X(),sL)?(p=ez(p,CJ)):(p=ez(p,DJ)):(p=ez(p,DJ))
+	}
+	j=hc(k,a);
+	for(q=0;q<j.c;q++)
+	{
+		o=(vH(q,j.c),su(j.b[q],4));
+		i=a.b[o.f][o.i];
+		!i?(p=iz(p,vJ)):i.c?(p=iz(p,DJ)):!i.c&&MF(i.X(),GK)?(p=iz(p,EJ)):!i.c&&MF(i.X(),tL)?(p=iz(p,FJ)):!i.c&&MF(i.X(),pL)?(p=iz(p,GJ)):!i.c&&MF(i.X(),qL)?(p=iz(p,HJ)):!i.c&&MF(i.X(),uL)?(p=iz(p,IJ)):!i.c&&MF(i.X(),rL)?(p=iz(p,JJ)):!i.c&&MF(i.X(),sL)?(p=iz(p,KJ)):(p=iz(p,DJ))
+	}
+	return p
+}
+function Rf()//Davis(B&W), Computer's Rook
+{
+	Rf=ZI;
+	Oe();
+	Gd=new qz(
+		(vz(),new sz('data:image/png;base64,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')),
+		28,
+		40
+	)
+}
+function xf()//Davis(B&W), Player's Rook
+{
+	xf=ZI;
+	Oe();
+	md=new qz(
+		(vz(),new sz('data:image/png;base64,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')),
+		28,
+		40
+	)
+}
+function mm(a)
+{
+	Cc();
+	switch(a)
+	{
+		case 0:
+			Kl=new YC((Rg(),Oe(),Ge));
+			Ml=new YC((Lg(),Ae));
+			Ol=new YC((Sg(),He));
+			Ql=new YC((Tg(),Ie));
+			Sl=new YC((Vg(),Ke));
+			Ul=new YC((Ng(),Ce));
+			Wl=new YC((Ug(),Je));
+			Yl=new YC((Mg(),Be));
+			$l=new YC((Wg(),Le));
+			am=new YC((Og(),De));
+			cm=new YC((Xg(),Me));
+			em=new YC((Pg(),Ee));
+			gm=new YC((Yg(),Ne));
+			im=new YC((Qg(),Fe));
+			Ll=new YC((xg(),me));
+			Nl=new YC((Fg(),ue));
+			Pl=new YC((yg(),ne));
+			Rl=new YC((zg(),oe));
+			Tl=new YC((Bg(),qe));
+			Vl=new YC((Hg(),we));
+			Xl=new YC((Ag(),pe));
+			Zl=new YC((Gg(),ve));
+			_l=new YC((Cg(),re));
+			bm=new YC((Ig(),xe));
+			dm=new YC((Dg(),se));
+			fm=new YC((Jg(),ye));
+			hm=new YC((Eg(),te));
+			jm=new YC((Kg(),ze));
+			break;
+		case 1:
+			Kl=new YC((pg(),Oe(),ee));
+			Ml=new YC((jg(),$d));
+			Ol=new YC((qg(),fe));
+			Ql=new YC((rg(),ge));
+			Sl=new YC((tg(),ie));
+			Ul=new YC((lg(),ae));
+			Wl=new YC((sg(),he));
+			Yl=new YC((kg(),_d));
+			$l=new YC((ug(),je));
+			am=new YC((mg(),be));
+			cm=new YC((vg(),ke));
+			em=new YC((ng(),ce));
+			gm=new YC((wg(),le));
+			im=new YC((og(),de));
+			Ll=new YC((Xf(),Md));
+			Nl=new YC((dg(),Ud));
+			Pl=new YC((Yf(),Nd));
+			Rl=new YC((Zf(),Od));
+			Tl=new YC((_f(),Qd));
+			Vl=new YC((fg(),Wd));
+			Xl=new YC(($f(),Pd));
+			Zl=new YC((eg(),Vd));
+			_l=new YC((ag(),Rd));
+			bm=new YC((gg(),Xd));
+			dm=new YC((bg(),Sd));
+			fm=new YC((hg(),Yd));
+			hm=new YC((cg(),Td));
+			jm=new YC((ig(),Zd));
+			break;
+		case 2:
+			Kl=new YC((jf(),Oe(),Zc));
+			Ml=new YC((cf(),Tc));
+			Ol=new YC((kf(),$c));
+			Ql=new YC((lf(),_c));
+			Sl=new YC((nf(),bd));
+			Ul=new YC((ef(),Vc));
+			Wl=new YC((mf(),ad));
+			Yl=new YC((df(),Uc));
+			$l=new YC((of(),cd));
+			am=new YC((ff(),Wc));
+			cm=new YC((pf(),dd));
+			em=new YC((gf(),Xc));
+			gm=new YC((qf(),ed));
+			im=new YC((hf(),Yc));
+			Ll=new YC((Qe(),Fc));
+			Nl=new YC((Ye(),Nc));
+			Pl=new YC((Re(),Gc));
+			Rl=new YC((Se(),Hc));
+			Tl=new YC((Ue(),Jc));
+			Vl=new YC(($e(),Pc));
+			Xl=new YC((Te(),Ic));
+			Zl=new YC((Ze(),Oc));
+			_l=new YC((Ve(),Kc));
+			bm=new YC((_e(),Qc));
+			dm=new YC((We(),Lc));
+			fm=new YC((af(),Rc));
+			hm=new YC((Xe(),Mc));
+			jm=new YC((bf(),Sc));
+			break;
+		case 3:
+			Kl=new YC((Lf(),Oe(),Ad));
+			Ml=new YC((Ff(),ud));
+			Ol=new YC((Mf(),Bd));
+			Ql=new YC((Nf(),Cd));
+			Sl=new YC((Pf(),Ed));
+			Ul=new YC((Hf(),wd));
+			Wl=new YC((Of(),Dd));
+			Yl=new YC((Gf(),vd));
+			$l=new YC((Qf(),Fd));
+			am=new YC((If(),xd));
+			cm=new YC((Rf(),Gd));
+			em=new YC((Jf(),yd));
+			gm=new YC((Sf(),Hd));
+			im=new YC((Kf(),zd));
+			Ll=new YC((rf(),fd));
+			Nl=new YC((zf(),od));
+			Pl=new YC((sf(),gd));
+			Rl=new YC((tf(),hd));
+			Tl=new YC((vf(),kd));
+			Vl=new YC((Bf(),qd));
+			Xl=new YC((uf(),jd));
+			Zl=new YC((Af(),pd));
+			_l=new YC((wf(),ld));
+			bm=new YC((Cf(),rd));
+			dm=new YC((xf(),md));
+			fm=new YC((Df(),sd));
+			hm=new YC((yf(),nd));
+			jm=new YC((Ef(),td));
+	}
+}
+function pf()//Davis, Computer's Rook
+{
+	pf=ZI;
+	Oe();
+	dd=new qz(
+		(vz(),new sz('data:image/png;base64,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')),
+		28,
+		40
+	)
+}
+function Pf()//Davis(B&W), Computer's Knight
+{
+	Pf=ZI;
+	Oe();
+	Ed=new qz(
+		(vz(),new sz('data:image/png;base64,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')),
+		28,
+		40
+	)
+}
+function Ug()//Western, Computer's Lance
+{
+	Ug=ZI;
+	Oe();
+	Je=new qz(
+		(vz(),new sz('data:image/png;base64,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')),
+		28,
+		40
+	)
+}
+function We()//Davis, Player's Rook
+{
+	We=ZI;
+	Oe();
+	Lc=new qz(
+		(vz(),new sz('data:image/png;base64,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')),
+		28,
+		40
+	)
+}

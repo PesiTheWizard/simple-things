@@ -3,7 +3,7 @@ function shogi2014()
 {
 	"use strict";
 	const cb='';
-	const _=' top: -1000px;';
+	//const _=' top: -1000px;';
 	//const zb='" for "gwt:onLoadErrorFn"';
 	//const xb='" for "gwt:onPropertyErrorFn"';
 	//const ib='");';
@@ -14,7 +14,7 @@ function shogi2014()
 	//const Vb='3595208ADCDE7458772834AAFDA670CE';
 	//const Wb='5608380F1D58BB32BBBB3CC08CE64606';
 	//const Xb='8025206D37E09B61D84381FDB4DC403C';
-	const $b=':';
+	//const $b=':';
 	//const rb='::';
 	//const mc=':moduleBase';
 	//const bb='<!doctype html>';
@@ -32,7 +32,7 @@ function shogi2014()
 	//const kc='__gwtDevModeHook:shogi2014';
 	//const jc='_gwt_dummy_';
 	//const Hb='base';
-	const Fb='baseUrl';
+	//const Fb='baseUrl';
 	const R='begin';
 	//const X='body';
 	const Q='bootstrap';
@@ -60,11 +60,11 @@ function shogi2014()
 	const kb='javascript';
 	const Z='javascript:""';
 	//const ac='link';
-	const ec='loadExternalRefs';
+	//const ec='loadExternalRefs';//only used by I(), moved to there
 	//const ob='meta';
 	//const mb='moduleRequested';
 	//const lb='moduleStartup';
-	const Mb='msie';
+	//const Mb='msie';//only used within H(), moved to there
 	//const pb='name';
 	const $='position:absolute; width:0; height:0; border:none; left: -1000px;';
 	//const bc='rel';
@@ -79,11 +79,11 @@ function shogi2014()
 	//const cc='stylesheet';
 	//const eb='undefined';//only used by C()->l()->b(), moved to C()
 	//const Sb='unknown';
-	const Jb='user.agent';
+	//const Jb='user.agent';//only used within H(), moved to there
 	//const Kb='webkit';
 	const o=window;
 	const p=document;
-	r(Q,R);
+	r(Q,R);//parameters are 'bootstrap' and 'begin'
 	function q()
 	{
 		var a=o.location.search;
@@ -91,6 +91,7 @@ function shogi2014()
 	}
 	function r(a,b)
 	{
+		console.log("r",a.toString(),b.toString());//TESTING
 		if(o.__gwtStatsEvent)
 		{
 			o.__gwtStatsEvent({
@@ -119,14 +120,15 @@ function shogi2014()
 	u[U]={moduleName:U};
 	var v;
 	function w(){B();return v}
-	function A(){B();return v.getElementsByTagName('body')[0]}//string was the singleton variable X
+	//function A(){B();return v.getElementsByTagName('body')[0]}//string was the singleton variable X
+	function A(){B();return p.getElementById('mainbody')}//a new A() that returns the original body instead of the iframe one
 	function B()//assigns to v only if it's unassigned; nothing else assigns to v. Called only by A() and w() above.
 	{
 		if(v){return}
 		var a=p.createElement('iframe');//string was the singleton variable Y
 		a.src=Z;
 		a.id=U;
-		a.style.cssText=$+_;
+		a.style.cssText=$+' top: -1000px;';//string was the singleton variable _
 		a.tabIndex=-1;
 		p.body.appendChild(a);
 		v=a.contentDocument;
@@ -186,7 +188,7 @@ function shogi2014()
 			{
 				var h=f.createDocumentFragment();
 				h.appendChild(f.createTextNode('eval("'));//string was the singleton variable hb
-				for(var i=0;i<c.length;i++)
+				for(var i=18;i<c.length;i++)
 				{
 					var j=window.JSON.stringify(c[i]);
 					h.appendChild(f.createTextNode(j.substring(1,j.length-1)))
@@ -196,21 +198,22 @@ function shogi2014()
 				g.language=kb;
 				g.appendChild(h);
 				e.appendChild(g);
-				d(e,g)
+				//d(e,g)
 			}
 			else
 			{
-				for(var i=0;i<c.length;i++)
+				for(var i=18;i<c.length;i++)
 				{
+					console.log("Handling string "+i);
 					g=f.createElement(jb);//jb is 'script'
 					g.language=kb;
 					g.text=c[i];
 					e.appendChild(g);//appends the script tag to the body
-					d(e,g)//immediately removes the script tag from the body
+					//d(e,g)//immediately removes the script tag from the body
 				}
 			}
 		}
-		shogi2014.onScriptDownloaded=function(a){l(function(){m(a)})};//the only time l is called
+		shogi2014.onScriptDownloaded=function(a){l(function(){m(a)})};//the only time l or m are called
 		r('moduleStartup','moduleRequested');//strings were the singleton variables lb and mb
 		/*
 		var n=p.createElement(jb);
@@ -310,7 +313,7 @@ function shogi2014()
 		}
 		function g()
 		{
-			var a=t(Fb);
+			var a=t('baseUrl');//string was the singleton variable Fb
 			if(a!=null){return a}
 			return cb
 		}
@@ -356,6 +359,8 @@ function shogi2014()
 		const Pb='ie8';
 		const Ob='ie9';
 		const Lb='safari';
+		const Mb='msie';
+		const Jb='user.agent';
 		//these were moved to here from the top of the file because they are only used here and H is only called once
 
 		var f=[];
@@ -418,7 +423,7 @@ function shogi2014()
 			h([Ob],'B1D5C701C540B654069E514356997F8C');//string was the singleton variable Yb
 			h([Pb],'C37E645092B50BE90C2BF4584845170D');//string was the singleton variable Zb
 			l=f[k(Jb)];
-			var m=l.indexOf($b);
+			var m=l.indexOf(':');//string was the singleton variable $b
 			if(m!=-1)
 			{
 				g=parseInt(l.substring(m+1),10);
@@ -431,8 +436,10 @@ function shogi2014()
 	}
 	function I()
 	{
+		const ec='loadExternalRefs';//moved to here from the top of the file because it is only used here
+
 		if(!o.__gwt_stylesLoaded){o.__gwt_stylesLoaded={}}
-		function c(a)
+		function c(a)//only called once, by the 2nd-to-last line in I()
 		{
 			if(!__gwt_stylesLoaded[a])
 			{
@@ -443,9 +450,9 @@ function shogi2014()
 				__gwt_stylesLoaded[a]=true
 			}
 		}
-		r(ec,R);
+		r(ec,R);//parameters are 'loadExternalRefs' and 'begin'
 		c('gwt/clean/clean.css');//string was the singleton variable fc
-		r(ec,gc)
+		r(ec,gc)//parameters are 'loadExternalRefs' and 'end'
 	}
 	D();
 	shogi2014.__moduleBase=F();
@@ -492,8 +499,10 @@ function shogi2014()
 		}
 	}
 	I();
-	r(Q,gc);
+	r(Q,gc);//parameters are 'bootstrap' and 'end'
 	C();//J was the parameter to C and was the path to the 'secret' JS file, this is the only time the function C is called.
 	return true
 }
+//here shogi2014.succeeded is undefined
 shogi2014.succeeded=shogi2014();
+//here shogi2014.succeeded is true
