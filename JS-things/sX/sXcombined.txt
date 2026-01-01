@@ -22,7 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 "use strict";
 
-const BOOK_DAT = [
+const BOOK_DAT = [//only read by Position.prototype.bookMove and binarySearch when called by Position.prototype.bookMove
 	[203040, 34229, 6],
 	[509427, 33955, 1],
 	[509427, 47046, 2],
@@ -12103,11 +12103,8 @@ const BOOK_DAT = [
 	[2103432998, 43190, 1],
 	[2109482397, 42404, 1],
 	[2113177639, 14907, 2],
-	[2123372452, 42436, 1],
-	null
-];
-
-BOOK_DAT.pop();
+	[2123372452, 42436, 1]
+];Object.freeze(BOOK_DAT);
 
 /*
 position.js - Source Code for XiangQi Wizard Light, Part I
@@ -12131,13 +12128,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-function binarySearch(vlss, vl)
+function binarySearch(vlss, vl)//only called by Position.prototype.bookMove
 {
-	var low = 0;
-	var high = vlss.length - 1;
+	let low = 0;
+	let high = vlss.length - 1;
 	while(low <= high)
 	{
-		var mid = (low + high) >> 1;
+		const mid = (low + high) >> 1;
 		if(vlss[mid][0] < vl)
 		{
 			low = mid + 1;
@@ -12178,7 +12175,7 @@ const FILE_RIGHT = 11;
 const ADD_PIECE = false;
 const DEL_PIECE = true;
 
-const IN_BOARD_ = [
+const IN_BOARD_ = [//only read by the IN_BOARD function
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -12194,8 +12191,8 @@ const IN_BOARD_ = [
   0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-];
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+];Object.freeze(IN_BOARD_);
 
 const IN_FORT_ = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -12213,10 +12210,10 @@ const IN_FORT_ = [
   0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-];
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+];Object.freeze(IN_FORT_);
 
-const LEGAL_SPAN = [
+const LEGAL_SPAN = [//only used by KING_SPAN, ADVISOR_SPAN and BISHOP_SPAN
                        0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -12249,8 +12246,8 @@ const LEGAL_SPAN = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0,
-];
+  0, 0, 0, 0, 0, 0, 0
+];Object.freeze(LEGAL_SPAN);
 
 const KNIGHT_PIN_ = [
                               0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -12285,16 +12282,16 @@ const KNIGHT_PIN_ = [
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-  0,  0,  0,  0,  0,  0,  0,
-];
+  0,  0,  0,  0,  0,  0,  0
+];Object.freeze(KNIGHT_PIN_);
 
-const KING_DELTA = [-16, -1, 1, 16];
-const ADVISOR_DELTA = [-17, -15, 15, 17];
+const KING_DELTA = [-16, -1, 1, 16];Object.freeze(KING_DELTA);
+const ADVISOR_DELTA = [-17, -15, 15, 17];Object.freeze(ADVISOR_DELTA);
 const KNIGHT_DELTA = [[-33, -31], [-18, 14], [-14, 18], [31, 33]];
 const KNIGHT_CHECK_DELTA = [[-33, -18], [-31, -14], [14, 31], [18, 33]];
 const MVV_VALUE = [50, 10, 10, 30, 40, 30, 20, 0];
 
-const PIECE_VALUE = [
+const PIECE_VALUE = [//only read by Position.prototype.addPiece
   [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -12414,15 +12411,15 @@ const PIECE_VALUE = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-  ],
-];
+  ]
+];Object.freeze(PIECE_VALUE);
 
-function IN_BOARD(sq)
+function IN_BOARD(sq)//the only use of the IN_BOARD_ array
 {
 	return IN_BOARD_[sq] != 0;
 }
 
-function IN_FORT(sq)
+function IN_FORT(sq)//the only use of the IN_FORT_ array
 {
 	return IN_FORT_[sq] != 0;
 }
@@ -12593,12 +12590,12 @@ function RC4(key)
 {
 	this.x = this.y = 0;
 	this.state = [];
-	for (var i = 0; i < 256; i++)
+	for(let i = 0; i < 256; i++)
 	{
 		this.state.push(i);
 	}
-	var j = 0;
-	for (var i = 0; i < 256; i++)
+	let j = 0;
+	for(let i = 0; i < 256; i++)
 	{
 		j = (j + this.state[i] + key[i % key.length]) & 0xff;
 		this.swap(i, j);
@@ -12607,7 +12604,7 @@ function RC4(key)
 
 RC4.prototype.swap = function(i, j)
 	{
-		var t = this.state[i];
+		const t = this.state[i];
 		this.state[i] = this.state[j];
 		this.state[j] = t;
 	}
@@ -12617,31 +12614,31 @@ RC4.prototype.nextByte = function()
 		this.x = (this.x + 1) & 0xff;
 		this.y = (this.y + this.state[this.x]) & 0xff;
 		this.swap(this.x, this.y);
-		var t = (this.state[this.x] + this.state[this.y]) & 0xff;
+		const t = (this.state[this.x] + this.state[this.y]) & 0xff;
 		return this.state[t];
 	}
 
 RC4.prototype.nextLong = function()
 	{
-		var n0 = this.nextByte();
-		var n1 = this.nextByte();
-		var n2 = this.nextByte();
-		var n3 = this.nextByte();
+		const n0 = this.nextByte();
+		const n1 = this.nextByte();
+		const n2 = this.nextByte();
+		const n3 = this.nextByte();
 		return n0 + (n1 << 8) + (n2 << 16) + ((n3 << 24) & 0xffffffff);
 	}
 
-var PreGen_zobristKeyPlayer, PreGen_zobristLockPlayer;
+//var PreGen_zobristKeyPlayer, PreGen_zobristLockPlayer;
 const PreGen_zobristKeyTable = [], PreGen_zobristLockTable = [];
 
-var rc4 = new RC4([0]);
-PreGen_zobristKeyPlayer = rc4.nextLong();
+const rc4 = new RC4([0]);
+const PreGen_zobristKeyPlayer = rc4.nextLong();
 rc4.nextLong();
-PreGen_zobristLockPlayer = rc4.nextLong();
-for(var i = 0; i < 14; i++)
+const PreGen_zobristLockPlayer = rc4.nextLong();
+for(let i = 0; i < 14; i++)
 {
-	var keys = [];
-	var locks = [];
-	for(var j = 0; j < 256; j++)
+	const keys = [];
+	const locks = [];
+	for(let j = 0; j < 256; j++)
 	{
 		keys.push(rc4.nextLong());
 		rc4.nextLong();
@@ -12650,6 +12647,8 @@ for(var i = 0; i < 14; i++)
 	PreGen_zobristKeyTable.push(keys);
 	PreGen_zobristLockTable.push(locks);
 }
+Object.freeze(PreGen_zobristKeyTable);
+Object.freeze(PreGen_zobristLockTable);
 
 function Position()
 {
@@ -12661,7 +12660,7 @@ Position.prototype.clearBoard = function()
 {
 	this.sdPlayer = 0;
 	this.squares = [];
-	for(var sq = 0; sq < 256; sq++)
+	for(let sq = 0; sq < 256; sq++)
 	{
 		this.squares.push(0);
 	}
@@ -12680,7 +12679,7 @@ Position.prototype.setIrrev = function()
 
 Position.prototype.addPiece = function(sq, pc, bDel)
 	{
-		var pcAdjust;
+		let pcAdjust;
 		this.squares[sq] = bDel ? 0 : pc;
 		if (pc < 16)
 		{
@@ -12699,9 +12698,9 @@ Position.prototype.addPiece = function(sq, pc, bDel)
 
 Position.prototype.movePiece = function(mv)
 	{
-		var sqSrc = SRC(mv);
-		var sqDst = DST(mv);
-		var pc = this.squares[sqDst];
+		const sqSrc = SRC(mv);
+		const sqDst = DST(mv);
+		let pc = this.squares[sqDst];
 		this.pcList.push(pc);
 		if (pc > 0)
 		{
@@ -12715,10 +12714,10 @@ Position.prototype.movePiece = function(mv)
 
 Position.prototype.undoMovePiece = function()
 {
-	var mv = this.mvList.pop();
-	var sqSrc = SRC(mv);
-	var sqDst = DST(mv);
-	var pc = this.squares[sqDst];
+	const mv = this.mvList.pop();
+	const sqSrc = SRC(mv);
+	const sqDst = DST(mv);
+	let pc = this.squares[sqDst];
 	this.addPiece(sqDst, pc, DEL_PIECE);
 	this.addPiece(sqSrc, pc, ADD_PIECE);
 	pc = this.pcList.pop();
@@ -12737,7 +12736,7 @@ Position.prototype.changeSide = function()
 
 Position.prototype.makeMove = function(mv)
 	{
-		var zobristKey = this.zobristKey;
+		const zobristKey = this.zobristKey;
 		this.movePiece(mv);
 		if (this.checked())
 		{
@@ -12783,14 +12782,14 @@ Position.prototype.undoNullMove = function()
 Position.prototype.fromFen = function(fen)
 	{
 		this.clearBoard();
-		var y = RANK_TOP;
-		var x = FILE_LEFT;
-		var index = 0;
+		let index = 0;
 		if(index == fen.length)
 		{
 			this.setIrrev();
 			return;
 		}
+		let y = RANK_TOP;
+		let x = FILE_LEFT;
 		var c = fen.charAt(index);
 		while (c != " ")
 		{
@@ -12861,11 +12860,11 @@ Position.prototype.fromFen = function(fen)
 
 Position.prototype.toFen = function()
 	{
-		var fen = "";
-		for(var y = RANK_TOP; y <= RANK_BOTTOM; y++)
+		let fen = "";
+		for(let y = RANK_TOP; y <= RANK_BOTTOM; y++)
 		{
-			var k = 0;
-			for(var x = FILE_LEFT; x <= FILE_RIGHT; x++)
+			let k = 0;
+			for(let x = FILE_LEFT; x <= FILE_RIGHT; x++)
 			{
 				var pc = this.squares[COORD_XY(x, y)];
 				if(pc > 0)
@@ -13120,10 +13119,10 @@ Position.prototype.generateMoves = function(vls)
 					}
 				}
 				break;
-			}
 		}
-		return mvs;
 	}
+	return mvs;
+}
 
 Position.prototype.legalMove = function(mv)
 	{
@@ -13219,7 +13218,7 @@ Position.prototype.checked = function()
 					return true;
 				}
 			}
-			for(var i = 0; i < 4; i++)
+			for(let i = 0; i < 4; i++)
 			{
 				if(this.squares[sqSrc + ADVISOR_DELTA[i]] != 0)
 				{
@@ -13234,7 +13233,7 @@ Position.prototype.checked = function()
 					}
 				}
 			}
-			for(var i = 0; i < 4; i++)
+			for(let i = 0; i < 4; i++)
 			{
 				var delta = KING_DELTA[i];
 				var sqDst = sqSrc + delta;
@@ -13273,8 +13272,8 @@ Position.prototype.checked = function()
 
 Position.prototype.isMate = function()
 	{
-		var mvs = this.generateMoves(null);
-		for(var i = 0; i < mvs.length; i++)
+		const mvs = this.generateMoves(null);
+		for(let i = 0; i < mvs.length; i++)
 		{
 			if(this.makeMove(mvs[i]))
 			{
@@ -13302,7 +13301,7 @@ Position.prototype.drawValue = function()
 
 Position.prototype.evaluate = function()
 	{
-		var vl = (this.sdPlayer == 0 ? this.vlWhite - this.vlBlack : this.vlBlack - this.vlWhite) + ADVANCED_VALUE;
+		const vl = (this.sdPlayer == 0 ? this.vlWhite - this.vlBlack : this.vlBlack - this.vlWhite) + ADVANCED_VALUE;
 		return vl == this.drawValue() ? vl - 1 : vl;
 	}
 
@@ -13367,9 +13366,9 @@ Position.prototype.mirror = function()
 	{
 		var pos = new Position();
 		pos.clearBoard();
-		for(var sq = 0; sq < 256; sq++)
+		for(let sq = 0; sq < 256; sq++)
 		{
-			var pc = this.squares[sq];
+			const pc = this.squares[sq];
 			if(pc > 0)
 			{
 				pos.addPiece(MIRROR_SQUARE(sq), pc);
@@ -13478,7 +13477,7 @@ function shellSort(mvs, vls)
 	while(stepLevel > 0)
 	{
 		var step = SHELL_STEP[stepLevel];
-		for(var i = step; i < mvs.length; i++)
+		for(let i = step; i < mvs.length; i++)
 		{
 			var mvBest = mvs[i];
 			var vlBest = vls[i];
@@ -13695,7 +13694,7 @@ Search.prototype.recordHash = function(flag, vl, depth, mv)
 Search.prototype.setBestMove = function(mv, depth)
 	{
 		this.historyTable[this.pos.historyIndex(mv)] += depth * depth;
-		var mvsKiller = this.killerTable[this.pos.distance];
+		const mvsKiller = this.killerTable[this.pos.distance];
 		if(mvsKiller[0] != mv)
 		{
 			mvsKiller[1] = mvsKiller[0];
@@ -13825,7 +13824,7 @@ Search.prototype.searchFull = function(vlAlpha_, vlBeta, depth, noNull)
 			{
 				continue;
 			}
-			var newDepth = this.pos.inCheck() || sort.singleReply ? depth : depth - 1;
+			const newDepth = this.pos.inCheck() || sort.singleReply ? depth : depth - 1;
 			if(vlBest == -MATE_VALUE)
 			{
 				vl = -this.searchFull(-vlBeta, -vlAlpha, newDepth, false);
@@ -13879,7 +13878,7 @@ Search.prototype.searchRoot = function(depth)
 			{
 				continue;
 			}
-			var newDepth = this.pos.inCheck() ? depth : depth - 1;
+			const newDepth = this.pos.inCheck() ? depth : depth - 1;
 			var vl;
 			if(vlBest == -MATE_VALUE)
 			{
@@ -13911,7 +13910,7 @@ Search.prototype.searchRoot = function(depth)
 
 Search.prototype.searchUnique = function(vlBeta, depth)
 	{
-		var sort = new MoveSort(this.mvResult, this.pos, this.killerTable, this.historyTable);
+		const sort = new MoveSort(this.mvResult, this.pos, this.killerTable, this.historyTable);
 		sort.next();
 		var mv;
 		while((mv = sort.next()) > 0)
@@ -13930,7 +13929,7 @@ Search.prototype.searchUnique = function(vlBeta, depth)
 		return true;
 	}
 
-Search.prototype.searchMain = function(depth, millis)
+Search.prototype.searchMain = function(depth, millis)//only called by Board.prototype.response
 	{
 		this.mvResult = this.pos.bookMove();
 		if(this.mvResult > 0)
@@ -13944,25 +13943,25 @@ Search.prototype.searchMain = function(depth, millis)
 			this.pos.undoMakeMove();
 		}
 		this.hashTable = [];
-		for(var i = 0; i <= this.hashMask; i++)
+		for(let i = 0; i <= this.hashMask; i++)
 		{
 			this.hashTable.push({depth: 0, flag: 0, vl: 0, mv: 0, zobristLock: 0});
 		}
 		this.killerTable = [];
-		for(var i = 0; i < LIMIT_DEPTH; i++)
+		for(let i = 0; i < LIMIT_DEPTH; i++)
 		{
 			this.killerTable.push([0, 0]);
 		}
 		this.historyTable = [];
-		for(var i = 0; i < 4096; i++)
+		for(let i = 0; i < 4096; i++)
 		{
 			this.historyTable.push(0);
 		}
 		this.mvResult = 0;
 		this.allNodes = 0;
 		this.pos.distance = 0;
-		var t = new Date().getTime();
-		for(var i = 1; i <= depth; i++)
+		const t = new Date().getTime();
+		for(let i = 1; i <= depth; i++)
 		{
 			var vl = this.searchRoot(i);
 			this.allMillis = new Date().getTime() - t;
@@ -14023,11 +14022,11 @@ const THINKING_SIZE = 32;
 const THINKING_LEFT = (BOARD_WIDTH - THINKING_SIZE) >> 1;
 const THINKING_TOP = (BOARD_HEIGHT - THINKING_SIZE) >> 1;
 const MAX_STEP = 8;
-const PIECE_NAME = [
+const PIECE_NAME = [//only used by Board.prototype.drawSquare
 	"oo", null, null, null, null, null, null, null,
 	"rk", "ra", "rb", "rn", "rr", "rc", "rp", null,
-	"bk", "ba", "bb", "bn", "br", "bc", "bp", null,
-];
+	"bk", "ba", "bb", "bn", "br", "bc", "bp", null
+];Object.freeze(PIECE_NAME);
 
 function SQ_X(sq)
 {
@@ -14055,20 +14054,20 @@ function alertDelay(message)
 	);
 }
 
-function Board(container, images, sounds)
+function Board(container)
 {
-	this.images = images;
-	this.sounds = sounds;
+	//this.images used to be here
+	//this.sounds used to be here
 	this.pos = new Position();
-	this.pos.fromFen("rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1");
-	this.animated = true;
+	this.pos.fromFen(STARTUP_FEN[0]);//was hardcoded string; let's see if it can read the Main array
+	this.animated = false;//was true
 	this.sound = true;
 	this.search = null;
 	this.imgSquares = [];
 	this.sqSelected = 0;
 	this.mvLast = 0;
 	this.millis = 0;
-	this.computer = -1;
+	this.computer = -1;// -1 means play without computer, but value gets overwritten as 1 by Main
 	this.result = RESULT_UNKNOWN;
 	this.busy = false;
 
@@ -14076,7 +14075,7 @@ function Board(container, images, sounds)
 	style.position = "relative";
 	style.width = BOARD_WIDTH + "px";
 	style.height = BOARD_HEIGHT + "px";
-	style.background = "url(" + images + "board.jpg)";
+	style.background = "url(board.jpg)";//was "url(" + images + "board.jpg)"
 	var this_ = this;
 	for(var sq = 0; sq < 256; sq++)
 	{
@@ -14085,7 +14084,7 @@ function Board(container, images, sounds)
 			this.imgSquares.push(null);
 			continue;
 		}
-		var img = document.createElement("img");
+		const img = document.createElement("img");
 		var style = img.style;
 		style.position = "absolute";
 		style.left = SQ_X(sq);
@@ -14105,7 +14104,7 @@ function Board(container, images, sounds)
 	}
 
 	this.thinking = document.createElement("img");
-	this.thinking.src = images + "thinking.gif";
+	this.thinking.src = "thinking.gif";//was images+"thinking.gif"
 	style = this.thinking.style;
 	style.visibility = "hidden";
 	style.position = "absolute";
@@ -14125,11 +14124,12 @@ Board.prototype.playSound = function(soundFile)
 		if(!this.sound){return;}
 		try
 		{
-			new Audio(this.sounds + soundFile + ".wav").play();
+			new Audio(soundFile + ".wav").play();//was this.sounds + soundFile + ".wav"
 		}
-		catch (e)
+		catch(e)
 		{
-			this.dummy.innerHTML= "<embed src=\"" + this.sounds + soundFile + ".wav\" hidden=\"true\" autostart=\"true\" loop=\"false\" />";
+			console.log("new Audio failed");
+			//we are NOT innerHTMLing an embed
 		}
 	}
 
@@ -14217,9 +14217,9 @@ Board.prototype.postAddMove = function(mv, computerMove)
 			this.playSound(computerMove ? "loss" : "win");
 			this.result = computerMove ? RESULT_LOSS : RESULT_WIN;
 
-			var pc = SIDE_TAG(this.pos.sdPlayer) + PIECE_KING;
-			var sqMate = 0;
-			for (var sq=0; sq<256; sq++)
+			const pc = SIDE_TAG(this.pos.sdPlayer) + PIECE_KING;
+			let sqMate = 0;
+			for(let sq=0; sq<256; sq++)
 			{
 				if(this.pos.squares[sq] == pc)
 				{
@@ -14236,8 +14236,8 @@ Board.prototype.postAddMove = function(mv, computerMove)
 			sqMate = this.flipped(sqMate);
 			var style = this.imgSquares[sqMate].style;
 			style.zIndex = 256;
-			var xMate = SQ_X(sqMate);
-			var step = MAX_STEP;
+			const xMate = SQ_X(sqMate);
+			let step = MAX_STEP;
 			var this_ = this;
 			var timer = setInterval(
 				function()
@@ -14247,7 +14247,7 @@ Board.prototype.postAddMove = function(mv, computerMove)
 						clearInterval(timer);
 						style.left = xMate + "px";
 						style.zIndex = 0;
-						this_.imgSquares[sqMate].src = this_.images + (this_.pos.sdPlayer == 0 ? "r" : "b") + "km.gif";
+						this_.imgSquares[sqMate].src = (this_.pos.sdPlayer == 0 ? "r" : "b") + "km.gif";//had this_.images
 						this_.postMate(computerMove);
 					}
 					else
@@ -14290,8 +14290,8 @@ Board.prototype.postAddMove = function(mv, computerMove)
 
 		if(this.pos.captured())
 		{
-			var hasMaterial = false;
-			for(var sq = 0; sq < 256; sq++)
+			let hasMaterial = false;
+			for(let sq = 0; sq < 256; sq++)
 			{
 				if(IN_BOARD(sq) && (this.pos.squares[sq] & 7) > 2)
 				{
@@ -14311,8 +14311,8 @@ Board.prototype.postAddMove = function(mv, computerMove)
 		}
 		else if(this.pos.pcList.length > 100)
 		{
-			var captured = false;
-			for(var i = 2; i <= 100; i++)
+			let captured = false;
+			for(let i = 2; i <= 100; i++)
 			{
 				if(this.pos.pcList[this.pos.pcList.length - i] > 0)
 				{
@@ -14371,7 +14371,7 @@ Board.prototype.response = function()
 			return;
 		}
 		this.thinking.style.visibility = "visible";
-		var this_ = this;
+		const this_ = this;
 		this.busy = true;
 		setTimeout(
 			function()
@@ -14389,8 +14389,8 @@ Board.prototype.clickSquare = function(sq_)
 		{
 			return;
 		}
-		var sq = this.flipped(sq_);
-		var pc = this.pos.squares[sq];
+		const sq = this.flipped(sq_);
+		const pc = this.pos.squares[sq];
 		if((pc & SIDE_TAG(this.pos.sdPlayer)) != 0)
 		{
 			this.playSound("click");
@@ -14414,15 +14414,15 @@ Board.prototype.clickSquare = function(sq_)
 
 Board.prototype.drawSquare = function(sq, selected)
 	{
-		var img = this.imgSquares[this.flipped(sq)];
-		img.src = this.images + PIECE_NAME[this.pos.squares[sq]] + ".gif";
-		img.style.backgroundImage = selected ? "url(" + this.images + "oos.gif)" : "";
+		const img = this.imgSquares[this.flipped(sq)];
+		img.src = PIECE_NAME[this.pos.squares[sq]] + ".gif";//had this.images
+		img.style.backgroundImage = selected ? "url(oos.gif)" : "";//had this.images
 	}
 
 Board.prototype.flushBoard = function()
 	{
 		this.mvLast = this.pos.mvList[this.pos.mvList.length - 1];
-		for(var sq = 0; sq < 256; sq++)
+		for(let sq = 0; sq < 256; sq++)
 		{
 			if(IN_BOARD(sq))
 			{
@@ -14431,7 +14431,7 @@ Board.prototype.flushBoard = function()
 		}
 	}
 
-Board.prototype.restart = function(fen)
+Board.prototype.restart = function(fen)//takes a string from STARTUP_FEN, only called by restart_click() in Main
 	{
 		if(this.busy)
 		{
@@ -14487,12 +14487,38 @@ function ASC(c)
 	return c.charCodeAt(0);
 }
 */
-function move2Iccs(mv)
+function move2Iccs(mv)//only called by board.onAddMove in Main
 {
-	var sqSrc = SRC(mv);
-	var sqDst = DST(mv);
+	const sqSrc = SRC(mv);
+	const sqDst = DST(mv);
 	return CHR(ASC("A") + FILE_X(sqSrc) - FILE_LEFT) +
 		CHR(ASC("9") - RANK_Y(sqSrc) + RANK_TOP) + "-" +
 		CHR(ASC("A") + FILE_X(sqDst) - FILE_LEFT) +
 		CHR(ASC("9") - RANK_Y(sqDst) + RANK_TOP);
 }
+
+//replacement functions below were added afterwards
+
+function move2bot(mv)//for the format used by playstrategy studies
+{
+	const sqSrc = SRC(mv);
+	const sqDst = DST(mv);
+	return CHR(ASC("a") + FILE_X(sqSrc) - FILE_LEFT) +
+		CHR(ASC("a") + RANK_Y(sqSrc) - RANK_TOP) +
+		CHR(ASC("a") + FILE_X(sqDst) - FILE_LEFT) +
+		CHR(ASC("a") + RANK_Y(sqDst) - RANK_TOP);
+}
+
+function move2botAPI(mv)//for the format used by the API
+{
+	const sqSrc = SRC(mv);
+	const sqDst = DST(mv);
+	return CHR(ASC("a") + FILE_X(sqSrc) - FILE_LEFT) +
+		(10 - RANK_Y(sqSrc) + RANK_TOP) +
+		CHR(ASC("a") + FILE_X(sqDst) - FILE_LEFT) +
+		(10 - RANK_Y(sqDst) + RANK_TOP);
+}
+/*
+ASC("A") = 65
+ASC("9") = 57
+*/
